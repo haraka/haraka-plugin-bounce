@@ -9,8 +9,8 @@
   ],
   "scripts": {
     "format": "npm run prettier:fix && npm run lint:fix",
-    "lint": "npx eslint@^8 *.js test",
-    "lint:fix": "npx eslint@^8 *.js test --fix",
+    "lint": "npx eslint@^9 *.js test",
+    "lint:fix": "npx eslint@^9 *.js test --fix",
     "prettier": "npx prettier . --check",
     "prettier:fix": "npx prettier . --write --log-level=warn",
     "test": "npx mocha@^11",
@@ -34,13 +34,17 @@
   "homepage": "https://github.com/haraka/haraka-plugin-bounce#readme",
   "dependencies": {
     "address-rfc2821": "^2.1.2",
-    "haraka-net-utils": "^1.6.0",
-    "haraka-plugin-spf": "^1.2.5",
-    "haraka-tld": "^1.2.1"
+    "haraka-net-utils": "^1.7.1",
+    "haraka-plugin-spf": "^1.2.9",
+    "haraka-tld": "^1.2.3"
   },
   "devDependencies": {
-    "@haraka/eslint-config": "1.1.3",
-    "haraka-email-message": "^1.2.3",
-    "haraka-test-fixtures": "1.3.5"
+    "@haraka/eslint-config": "^2.0.2",
+    "haraka-email-message": "^1.2.4",
+    "haraka-test-fixtures": "1.3.8"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "semi": false
   }
 }
