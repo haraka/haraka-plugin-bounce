@@ -1,8 +1,6 @@
 [![CI Test Status][ci-img]][ci-url]
 [![Code Climate][clim-img]][clim-url]
 
-[![NPM][npm-img]][npm-url]
-
 # haraka-plugin-bounce
 
 # bounce
@@ -77,5 +75,3 @@ $EDITOR config/bounce.ini
 [ci-url]: https://github.com/haraka/haraka-plugin-bounce/actions/workflows/ci.yml
 [clim-img]: https://codeclimate.com/github/haraka/haraka-plugin-bounce/badges/gpa.svg
 [clim-url]: https://codeclimate.com/github/haraka/haraka-plugin-bounce
-[npm-img]: https://nodei.co/npm/haraka-plugin-bounce.png
-[npm-url]: https://www.npmjs.com/package/haraka-plugin-bounce
