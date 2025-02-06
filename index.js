@@ -168,13 +168,8 @@ exports.has_null_sender = function (connection, mail_from) {
   // bounces have a null sender.
   // null sender could also be tested with mail_from.user
   // Why would isNull() exist if it wasn't the right way to test this?
-  if (mail_from.isNull()) {
-    transaction.results.add(this, { isa: 'yes' })
-    return true
-  }
-
-  transaction.results.add(this, { isa: 'no' })
-  return false
+  transaction.results.add(this, { isa: !!mail_from.isNull() })
+  return !! mail_from.isNull()
 }
 
 const message_id_re = /^Message-ID:\s*(<?[^>]+>?)/gim
