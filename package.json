@@ -41,7 +41,8 @@
   "devDependencies": {
     "@haraka/eslint-config": "^2.0.2",
     "haraka-email-message": "^1.2.4",
-    "haraka-test-fixtures": "1.3.8"
+    "haraka-test-fixtures": "1.3.8",
+    "sinon": "^19.0.2"
   },
   "prettier": {
     "singleQuote": true,
