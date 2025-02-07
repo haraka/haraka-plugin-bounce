@@ -18,13 +18,13 @@ Some features can have rejections disabled in the [reject] section.
 [check]
 single_recipient=true
 empty_return_path=false
-bad_rcpt=true
 bounce_spf=true
 non_local_msgid=true
 
 [reject]
 single_recipient=true
 empty_return_path=false
+bad_rcpt=true
 bounce_spf=false
 non_local_msgid=false
 all_bounces=false
