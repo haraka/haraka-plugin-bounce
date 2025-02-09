@@ -280,7 +280,7 @@ exports.non_local_msgid = function (next, connection) {
     )
   }
 
-  return next()
+  next()
 }
 
 // Lazy regexp to get IPs from Received: headers in bounces
