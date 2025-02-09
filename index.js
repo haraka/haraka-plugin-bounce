@@ -124,7 +124,7 @@ exports.single_recipient = function (next, connection) {
     next(DENY, 'this bounce message has too many recipients')
   }
 
-  return next()
+  next()
 }
 
 exports.empty_return_path = function (next, connection) {
@@ -159,7 +159,7 @@ exports.empty_return_path = function (next, connection) {
     return next(DENY, 'bounce with non-empty Return-Path (RFC 3834)')
   }
 
-  return next()
+  next()
 }
 
 exports.bad_rcpt = function (next, connection, rcpt) {
@@ -172,7 +172,7 @@ exports.bad_rcpt = function (next, connection, rcpt) {
   }
   connection.transaction.results.add(this, { pass: 'bad_rcpt' })
 
-  return next()
+  next()
 }
 
 exports.has_null_sender = function (connection, mail_from) {
