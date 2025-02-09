@@ -68,7 +68,6 @@ exports.load_bounce_ini = function () {
   // legacy settings
   const c = this.cfg
   if (c.check.reject_all) c.reject.all_bounces = c.check.reject_all
-  if (c.check.reject) c.reject.reject = c.check.reject
 }
 
 exports.reject_all = function (next, connection, params) {
