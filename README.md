@@ -32,12 +32,6 @@ all_bounces=false
 
 ## Features
 
-### reject_all
-
-When enabled, blocks all bounce messages using the simple rule of checking for `MAIL FROM:<>`.
-
-It is generally a bad idea to block all bounces. This option can be useful for mail servers at domains with frequent spoofing and few or no human users.
-
 ### single_recipient
 
 Valid bounces have a single recipient. Assure that the message really is a bounce by enforcing bounces to be addressed to a single recipient.
@@ -59,6 +53,12 @@ Include email addresses in that file that should _never_ receive bounce messages
 Parses the message body and any MIME parts for Received: headers and strips out the IP addresses of each Received hop and then checks what the SPF result would have been if bounced message had been sent by that hop.
 
 If no 'Pass' result is found, then this test will fail. If SPF returns 'None', 'TempError' or 'PermError' then the test will be skipped.
+
+### all_bounces
+
+When enabled, blocks all bounce messages using the simple rule of checking for `MAIL FROM:<>`.
+
+It is generally a bad idea to block all bounces. This option can be useful for mail servers at domains with frequent spoofing and few or no human users.
 
 ## USAGE
 
