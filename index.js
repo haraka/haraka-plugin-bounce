@@ -121,7 +121,7 @@ exports.single_recipient = function (next, connection) {
   transaction.results.add(this, { fail: 'single_recipient', emit: true })
 
   if (this.cfg.reject.single_recipient) {
-    next(DENY, 'this bounce message has too many recipients')
+    return next(DENY, 'this bounce message has too many recipients')
   }
 
   next()
@@ -166,7 +166,7 @@ exports.bad_rcpt = function (next, connection, rcpt) {
   if (!this.cfg.reject.bad_rcpt) return next()
   if (!this.has_null_sender(connection)) return next()
 
-  if (this.cfg.invalid_addrs.includes(rcpt.address())) {
+  if (this.cfg.invalid_addrs.includes(rcpt.address().toLowerCase())) {
     connection.transaction.results.add(this, { fail: 'bad_rcpt', emit: true })
     return next(DENY, 'That recipient does not accept bounces')
   }
@@ -177,7 +177,7 @@ exports.bad_rcpt = function (next, connection, rcpt) {
 
 exports.has_null_sender = function (connection, mail_from) {
   const { transaction } = connection
-  if (!transaction) return next()
+  if (!transaction) return false
 
   if (!mail_from) mail_from = transaction.mail_from
 
