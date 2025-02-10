@@ -177,6 +177,7 @@ exports.bad_rcpt = function (next, connection, rcpt) {
 
 exports.has_null_sender = function (connection, mail_from) {
   const { transaction } = connection
+  if (!transaction) return next()
 
   if (!mail_from) mail_from = transaction.mail_from
 
@@ -373,5 +374,5 @@ exports.bounce_spf = async function (next, connection) {
     return next(DENY, 'Invalid bounce (spoofed sender)')
   }
 
-  return next()
+  next()
 }
