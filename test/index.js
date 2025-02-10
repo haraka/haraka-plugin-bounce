@@ -552,6 +552,12 @@ describe('has_null_sender', function () {
     assert.strictEqual(this.plugin.has_null_sender(this.connection), false)
     assert.strictEqual(this.connection.transaction.results.get(this.plugin).isa, false)
   })
+
+  it('missing transaction', function () {
+    this.connection.transaction = undefined
+
+    assert.strictEqual(this.plugin.has_null_sender(this.connection), false)
+  })
 })
 
 describe('bounce_spf', function () {
