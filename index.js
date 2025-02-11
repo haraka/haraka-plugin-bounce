@@ -70,14 +70,16 @@ exports.load_bounce_ini = function () {
   if (c.check.reject_all) c.reject.all_bounces = c.check.reject_all
 }
 
-exports.reject_all = function (next, connection, params) {
+exports.reject_all = function (next, connection) {
   if (!this.cfg.reject.all_bounces) return next()
 
-  const mail_from = params[0]
-  // bounce messages are from null senders
-  if (!this.has_null_sender(connection, mail_from)) return next()
+  const { transaction } = connection
+  if (!transaction) return next()
 
-  connection.transaction.results.add(this, {
+  // bounce messages are from null senders
+  if (!this.has_null_sender(transaction)) return next()
+
+  transaction.results.add(this, {
     fail: 'bounces_accepted',
     emit: true,
   })
@@ -86,8 +88,11 @@ exports.reject_all = function (next, connection, params) {
 
 exports.single_recipient = function (next, connection) {
   if (!this.cfg.check.single_recipient) return next()
-  if (!this.has_null_sender(connection)) return next()
+
   const { transaction, relaying, remote } = connection
+  if (!transaction) return next()
+
+  if (!this.has_null_sender(transaction)) return next()
 
   // Valid bounces have a single recipient
   if (transaction.rcpt_to.length === 1) {
@@ -129,9 +134,11 @@ exports.single_recipient = function (next, connection) {
 
 exports.empty_return_path = function (next, connection) {
   if (!this.cfg.check.empty_return_path) return next()
-  if (!this.has_null_sender(connection)) return next()
-
+ 
   const { transaction } = connection
+  if (!transaction) return next()
+
+  if (!this.has_null_sender(transaction)) return next()
 
   // Bounce messages generally do not have a Return-Path set. This checks
   // for that. But whether it should is worth questioning...
@@ -164,28 +171,28 @@ exports.empty_return_path = function (next, connection) {
 
 exports.bad_rcpt = function (next, connection, rcpt) {
   if (!this.cfg.reject.bad_rcpt) return next()
-  if (!this.has_null_sender(connection)) return next()
+
+  const { transaction } = connection
+  if (!transaction) return next()
+
+  if (!this.has_null_sender(transaction)) return next()
 
   if (this.cfg.invalid_addrs.includes(rcpt.address().toLowerCase())) {
-    connection.transaction.results.add(this, { fail: 'bad_rcpt', emit: true })
+    transaction.results.add(this, { fail: 'bad_rcpt', emit: true })
     return next(DENY, 'That recipient does not accept bounces')
   }
-  connection.transaction.results.add(this, { pass: 'bad_rcpt' })
+  transaction.results.add(this, { pass: 'bad_rcpt' })
 
   next()
 }
 
-exports.has_null_sender = function (connection, mail_from) {
-  const { transaction } = connection
-  if (!transaction) return false
-
-  if (!mail_from) mail_from = transaction.mail_from
-
+exports.has_null_sender = function (transaction) {
   // bounces have a null sender.
   // null sender could also be tested with mail_from.user
   // Why would isNull() exist if it wasn't the right way to test this?
-  transaction.results.add(this, { isa: !!mail_from.isNull() })
-  return !!mail_from.isNull()
+  const is_null_sender = !!transaction.mail_from.isNull()
+  transaction.results.add(this, { isa: is_null_sender })
+  return is_null_sender
 }
 
 const message_id_re = /^Message-ID:\s*<[^@>]+@([^>]+)>/gim  // this should match on the host name
@@ -206,9 +213,12 @@ function find_message_id_headers(domains, body, connection, self) {
 
 exports.non_local_msgid = function (next, connection) {
   if (!this.cfg.check.non_local_msgid) return next()
-  if (!this.has_null_sender(connection)) return next()
 
   const { transaction } = connection
+  if (!transaction) return next()
+
+  if (!this.has_null_sender(transaction)) return next()
+
   // Bounce messages usually contain the headers of the original message
   // in the body. This parses the body, searching for the Message-ID header.
   // It then inspects the contents of that header, extracting the domain part,
@@ -305,17 +315,22 @@ function find_received_headers(ips, body, connection, self) {
 }
 
 exports.bounce_spf_enable = function (next, connection) {
+  const { transaction } = connection
+  if (!transaction) return next()
+
   if (this.cfg.check.bounce_spf) {
-    connection.transaction.parse_body = true
+    transaction.parse_body = true
   }
   next()
 }
 
 exports.bounce_spf = async function (next, connection) {
   if (!this.cfg.check.bounce_spf) return next()
-  if (!this.has_null_sender(connection)) return next()
 
   const { transaction } = connection
+  if (!transaction) return next()
+
+  if (!this.has_null_sender(transaction)) return next()
 
   // Recurse through all textual parts and store all parsed IPs
   // in an object to remove any duplicates which might appear.
