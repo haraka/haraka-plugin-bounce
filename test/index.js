@@ -126,6 +126,22 @@ describe('reject_all', function () {
       [new Address.Address('<>')],
     )
   })
+
+  it('reject_all - missing transaction', function (done) {
+    this.plugin.cfg.reject.all_bounces = true
+
+    delete this.connection.transaction
+
+    this.plugin.reject_all(
+      (code, msg) => {
+        assert.strictEqual(code, undefined)
+        assert.strictEqual(msg, undefined)
+        done()
+      },
+      this.connection,
+      [new Address.Address('<>')],
+    )
+  })
 })
 
 describe('empty_return_path', function () {
@@ -186,6 +202,18 @@ describe('empty_return_path', function () {
       )
       assert.equal(code, DENY)
       assert.strictEqual(msg, 'bounce with non-empty Return-Path (RFC 3834)')
+      done()
+    }, this.connection)
+  })
+
+  it('empty_return_path - missing transaction', function (done) {
+    this.plugin.cfg.check.empty_return_path = true
+
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.strictEqual(code, undefined)
+      assert.strictEqual(msg, undefined)
       done()
     }, this.connection)
   })
@@ -394,6 +422,21 @@ describe('non_local_msgid', function () {
       done()
     }, this.connection)
   })
+
+  it('non_local_msgid - missing transaction', function (done) {
+    this.plugin.cfg.check.non_local_msgid = true
+
+    delete this.connection.transaction
+
+    this.plugin.non_local_msgid(
+      (code, msg) => {
+        assert.strictEqual(code, undefined)
+        assert.strictEqual(msg, undefined)
+        done()
+      },
+      this.connection,
+    )
+  })
 })
 
 describe('single_recipient', function () {
@@ -471,6 +514,21 @@ describe('single_recipient', function () {
       done()
     }, this.connection)
   })
+
+  it('single_recipient - missing transaction', function (done) {
+    this.plugin.cfg.check.single_recipient = true
+
+    delete this.connection.transaction
+
+    this.plugin.single_recipient(
+      (code, msg) => {
+        assert.strictEqual(code, undefined)
+        assert.strictEqual(msg, undefined)
+        done()
+      },
+      this.connection,
+    )
+  })
 })
 
 describe('bad_rcpt', function () {
@@ -530,33 +588,61 @@ describe('bad_rcpt', function () {
       rcpt,
     )
   })
+
+  it('bad_rcpt - missing transaction', function (done) {
+    this.plugin.cfg.reject.bad_rcpt = true
+
+    delete this.connection.transaction
+
+    this.plugin.reject_all(
+      (code, msg) => {
+        assert.strictEqual(code, undefined)
+        assert.strictEqual(msg, undefined)
+        done()
+      },
+      this.connection,
+      [new Address.Address('<>')],
+    )
+  })
 })
 
 describe('has_null_sender', function () {
-  it('<>', function () {
+  it('<>', function (done) {
     this.connection.transaction.mail_from = new Address.Address('<>')
-    assert.ok(this.plugin.has_null_sender(this.connection))
+    assert.ok(this.plugin.has_null_sender(this.connection.transaction))
     assert.ok(this.connection.transaction.results.get(this.plugin).isa)
+    done()
   })
 
-  it(' ', function () {
+  it(' ', function (done) {
     this.connection.transaction.mail_from = new Address.Address('')
-    assert.ok(this.plugin.has_null_sender(this.connection))
+    assert.ok(this.plugin.has_null_sender(this.connection.transaction))
     assert.ok(this.connection.transaction.results.get(this.plugin).isa)
+    done()
   })
 
-  it('user@example.com', function () {
+  it('user@example.com', function (done) {
     this.connection.transaction.mail_from = new Address.Address(
       'user@example.com',
     )
-    assert.strictEqual(this.plugin.has_null_sender(this.connection), false)
+    assert.strictEqual(this.plugin.has_null_sender(this.connection.transaction), false)
     assert.strictEqual(this.connection.transaction.results.get(this.plugin).isa, false)
+    done()
   })
+})
 
-  it('missing transaction', function () {
+describe('bounce_spf_enable', function () {
+  it('bounce_spf_enable - missing transaction', function (done) {
     this.connection.transaction = undefined
 
-    assert.strictEqual(this.plugin.has_null_sender(this.connection), false)
+    this.plugin.bounce_spf_enable(
+      (code, msg) => {
+        assert.strictEqual(code, undefined)
+        assert.strictEqual(msg, undefined)
+        done()
+      },
+      this.connection,
+    )
   })
 })
 
@@ -836,5 +922,20 @@ describe('bounce_spf', function () {
       assert.equal(code, DENY)
       assert.equal(msg, 'Invalid bounce (spoofed sender)')
     }, this.connection)
+  })
+
+  it('bounce_spf - missing transaction', function (done) {
+    this.plugin.cfg.check.bounce_spf = true
+
+    delete this.connection.transaction
+
+    this.plugin.bounce_spf(
+      (code, msg) => {
+        assert.strictEqual(code, undefined)
+        assert.strictEqual(msg, undefined)
+        done()
+      },
+      this.connection,
+    )
   })
 })
