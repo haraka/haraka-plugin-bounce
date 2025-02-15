@@ -1,5 +1,5 @@
 'use strict'
-const assert = require('node:assert')
+const assert = require('node:assert/strict')
 const sinon = require('sinon')
 
 const Address = require('address-rfc2821')
@@ -27,7 +27,6 @@ beforeEach( function () {
       bounce_spf: true,
     },
     host_list: ['example.net'],
-    allowed_msgids: ['test.example.org'],
   }
 
   this.connection = fixtures.connection.createConnection()
@@ -61,9 +60,9 @@ describe('load_configs', function () {
     done()
   })
 
-  it('load_bounce_allowed_msgids', function (done) {
-    this.plugin.load_bounce_allowed_msgids()
-    assert.ok(this.plugin.cfg.allowed_msgids)
+  it('load_allowed_msgid_domains', function (done) {
+    this.plugin.load_allowed_msgid_domains()
+    assert.ok(this.plugin.cfg.allowed_msgid_domains)
     done()
   })
 })
@@ -147,10 +146,7 @@ describe('reject_all', function () {
 describe('empty_return_path', function () {
   it('missing Return-Path header', function (done) {
     this.plugin.empty_return_path((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).pass,
-        'empty_return_path',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'empty_return_path'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -160,10 +156,7 @@ describe('empty_return_path', function () {
   it('has empty Return-Path header', function (done) {
     this.connection.transaction.header.add('Return-Path', '<>')
     this.plugin.empty_return_path((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).pass,
-        'empty_return_path',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'empty_return_path'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -179,10 +172,7 @@ describe('empty_return_path', function () {
     this.plugin.cfg.reject.empty_return_path = false
 
     this.plugin.empty_return_path((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'empty_return_path',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'empty_return_path'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -196,10 +186,7 @@ describe('empty_return_path', function () {
     )
 
     this.plugin.empty_return_path((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'empty_return_path',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'empty_return_path'))
       assert.equal(code, DENY)
       assert.strictEqual(msg, 'bounce with non-empty Return-Path (RFC 3834)')
       done()
@@ -222,20 +209,16 @@ describe('empty_return_path', function () {
 describe('non_local_msgid', function () {
   beforeEach(function (done) {
     this.plugin.load_host_list()
-    this.plugin.load_bounce_allowed_msgids()
+    this.plugin.load_allowed_msgid_domains()
 
-    this.connection.transaction.body = new message.Body()
+    this.connection.transaction.body = {bodytext: '', children: []}
 
     done()
   })
 
   it('no msgid in headers', function (done) {
-    this.connection.transaction.body.bodytext = ''
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'Message-ID',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'Message-ID'))
       assert.equal(code, DENY)
       assert.equal(
         msg,
@@ -247,13 +230,9 @@ describe('non_local_msgid', function () {
 
   it('allow - no domains in msgid', function (done) {
     this.plugin.cfg.reject.non_local_msgid = false
-    //this.connection.transaction.body = new message.Body()
     this.connection.transaction.body.bodytext = 'Message-ID:<blah>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'Message-ID',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'Message-ID'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -261,13 +240,9 @@ describe('non_local_msgid', function () {
   })
 
   it('reject - no domains in msgid', function (done) {
-    //this.connection.transaction.body = new message.Body()
     this.connection.transaction.body.bodytext = 'Message-ID:<blah>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'Message-ID',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'Message-ID'))
       assert.equal(code, DENY)
       assert.equal(msg, "bounce without Message-ID in headers, I didn't send it")
       done()
@@ -275,14 +250,9 @@ describe('non_local_msgid', function () {
   })
 
   it('reject invalid msgid', function (done) {
-    //this.connection.transaction.body = new message.Body()
-    //this.connection.transaction.body.bodytext = 'Message-ID: blah@example.com'
     this.connection.transaction.body.bodytext = 'Message-ID: <@example.com>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'Message-ID',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'Message-ID'))
       assert.equal(code, DENY)
       assert.equal(msg, "bounce without Message-ID in headers, I didn't send it")
       done()
@@ -291,14 +261,9 @@ describe('non_local_msgid', function () {
 
   it('domain in msgid matches host_list', function (done) {
     this.plugin.cfg.host_list = 'example.net'
-    this.connection.transaction.body = new message.Body()
-    this.connection.transaction.body.bodytext =
-      'Message-ID: <test@example.net>'
+    this.connection.transaction.body.bodytext = 'Message-ID: <test@example.net>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).pass,
-        'Message-ID valid domain',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'Message-ID valid domain'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -307,15 +272,11 @@ describe('non_local_msgid', function () {
 
   it('domain in multiple msgids matches host_list', function (done) {
     this.plugin.cfg.host_list = 'example.net'
-    //this.connection.transaction.body = new message.Body()
-    this.connection.transaction.body = {bodytext: "Message-ID: <test@example.net>\nMessage-ID: <bar@example.org>", "children": []}
+    this.connection.transaction.body.bodytext = "Message-ID: <test@example.net>\nMessage-ID: <bar@example.org>"
     this.connection.transaction.body.children[0] = {"bodytext":"Message-ID: <foo@example.net>","children": []}
 
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).pass,
-        'Message-ID valid domain',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'Message-ID valid domain'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -323,14 +284,9 @@ describe('non_local_msgid', function () {
   })
 
   it('valid domain in msgid matches recipient host', function (done) {
-    this.connection.transaction.body = new message.Body()
-    this.connection.transaction.body.bodytext =
-      'Message-ID: <test@example.com>'
+    this.connection.transaction.body.bodytext = 'Message-ID: <test@example.com>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).pass,
-        'Message-ID valid domain',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'Message-ID valid domain'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -339,14 +295,9 @@ describe('non_local_msgid', function () {
 
   it('allow - no valid domains in msgid', function (done) {
     this.plugin.cfg.reject.non_local_msgid = false
-    this.connection.transaction.body = new message.Body()
-    this.connection.transaction.body.bodytext =
-      'Message-ID: <blah@foo.cooooooom>'
+    this.connection.transaction.body.bodytext = 'Message-ID: <blah@foo.cooooooom>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'Message-ID parseable',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'Message-ID parseable'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -355,13 +306,9 @@ describe('non_local_msgid', function () {
 
   it('reject - no valid domains in msgid', function (done) {
     this.connection.transaction.body = new message.Body()
-    this.connection.transaction.body.bodytext =
-      'Message-ID: <blah@foo.cooooooom>'
+    this.connection.transaction.body.bodytext = 'Message-ID: <blah@foo.cooooooom>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'Message-ID parseable',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'Message-ID parseable'))
       assert.equal(code, DENY)
       assert.equal(
         msg,
@@ -373,15 +320,9 @@ describe('non_local_msgid', function () {
 
   it('allow - non-local domain in msgid', function (done) {
     this.plugin.cfg.reject.non_local_msgid = false
-    this.connection.transaction.body = {
-      bodytext: 'Message-ID: <blah@foo.com>',
-      children: [],
-    }
+    this.connection.transaction.body.bodytext = 'Message-ID: <blah@foo.com>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'Message-ID non-local domain',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'Message-ID non-local domain'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -389,15 +330,9 @@ describe('non_local_msgid', function () {
   })
 
   it('reject - non-local domain in msgid', function (done) {
-    this.connection.transaction.body = {
-      bodytext: 'Message-ID: <blah@foo.com>',
-      children: [],
-    }
+    this.connection.transaction.body.bodytext = 'Message-ID: <blah@foo.com>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'Message-ID non-local domain',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'Message-ID non-local domain'))
       assert.equal(code, DENY)
       assert.equal(
         msg,
@@ -408,15 +343,10 @@ describe('non_local_msgid', function () {
   })
 
   it('domain in msgid matches allowed msgid', function (done) {
-    this.plugin.cfg.allowed_msgids = ['test.example.org']
-    this.connection.transaction.body = new message.Body()
-    this.connection.transaction.body.bodytext =
-      'Message-ID: <test@test.example.org>'
+    this.plugin.cfg.allowed_msgid_domains = ['test.example.org']
+    this.connection.transaction.body.bodytext = 'Message-ID: <test@test.example.org>'
     this.plugin.non_local_msgid((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).pass,
-        'Message-ID allowed domain',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'Message-ID allowed domain'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -446,10 +376,7 @@ describe('single_recipient', function () {
       new Address.Address('test2@example.com'),
     )
     this.plugin.single_recipient((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).skip,
-        'single_recipient(relay)',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip',  'single_recipient(relay)'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -462,10 +389,7 @@ describe('single_recipient', function () {
       new Address.Address('test2@example.com'),
     )
     this.plugin.single_recipient((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).skip,
-        'single_recipient(private_ip)',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip',  'single_recipient(private_ip)'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -474,10 +398,7 @@ describe('single_recipient', function () {
 
   it('single recipient', function (done) {
     this.plugin.single_recipient((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).pass,
-        'single_recipient',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'single_recipient'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -490,10 +411,7 @@ describe('single_recipient', function () {
       new Address.Address('test2@example.com'),
     )
     this.plugin.single_recipient((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'single_recipient',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'single_recipient'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
       done()
@@ -505,10 +423,7 @@ describe('single_recipient', function () {
       new Address.Address('test2@example.com'),
     )
     this.plugin.single_recipient((code, msg) => {
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'single_recipient',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'single_recipient'))
       assert.equal(code, DENY)
       assert.equal(msg, 'this bounce message has too many recipients')
       done()
@@ -542,10 +457,7 @@ describe('bad_rcpt', function () {
     const rcpt = new Address.Address('test@good.com')
     this.plugin.bad_rcpt(
       (code, msg) => {
-        assert.equal(
-          this.connection.transaction.results.get(this.plugin).pass,
-          'bad_rcpt',
-        )
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'bad_rcpt'))
         assert.strictEqual(code, undefined)
         assert.strictEqual(msg, undefined)
         done()
@@ -559,10 +471,7 @@ describe('bad_rcpt', function () {
     const rcpt = new Address.Address('test@good.com')
     this.plugin.bad_rcpt(
       (code, msg) => {
-        assert.equal(
-          this.connection.transaction.results.get(this.plugin).pass,
-          'bad_rcpt',
-        )
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'bad_rcpt'))
         assert.strictEqual(code, undefined)
         assert.strictEqual(msg, undefined)
         done()
@@ -576,12 +485,9 @@ describe('bad_rcpt', function () {
     const rcpt = new Address.Address('test@bad1.com')
     this.plugin.bad_rcpt(
       (code, msg) => {
-        assert.equal(
-          this.connection.transaction.results.get(this.plugin).fail,
-          'bad_rcpt',
-        )
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'bad_rcpt'))
         assert.equal(code, DENY)
-        assert.equal(msg, 'That recipient does not accept bounces')
+        assert.equal(msg, `${rcpt.address()} does not accept bounces`)
         done()
       },
       this.connection,
@@ -610,14 +516,15 @@ describe('has_null_sender', function () {
   it('<>', function (done) {
     this.connection.transaction.mail_from = new Address.Address('<>')
     assert.ok(this.plugin.has_null_sender(this.connection.transaction))
-    assert.ok(this.connection.transaction.results.get(this.plugin).isa)
+
+    assert.ok(this.connection.transaction.results.has(this.plugin, 'isa',  'yes'))
     done()
   })
 
   it(' ', function (done) {
     this.connection.transaction.mail_from = new Address.Address('')
     assert.ok(this.plugin.has_null_sender(this.connection.transaction))
-    assert.ok(this.connection.transaction.results.get(this.plugin).isa)
+    assert.ok(this.connection.transaction.results.has(this.plugin, 'isa',  'yes'))
     done()
   })
 
@@ -626,7 +533,7 @@ describe('has_null_sender', function () {
       'user@example.com',
     )
     assert.strictEqual(this.plugin.has_null_sender(this.connection.transaction), false)
-    assert.strictEqual(this.connection.transaction.results.get(this.plugin).isa, false)
+    assert.ok(this.connection.transaction.results.has(this.plugin, 'isa',  'no'))
     done()
   })
 })
@@ -662,7 +569,8 @@ describe('bounce_spf', function () {
     this.SPF_TEMPERROR = 6
     this.SPF_PERMERROR = 7
 
-    this.check_host_Spy = sinon.stub(SPF.prototype, 'check_host')
+    this.SPF_check_host_Spy = sinon.stub(SPF.prototype, 'check_host')
+    this.SPF_constructor_Spy = sinon.stub(SPF.prototype, 'constructor')
 
     done()
   })
@@ -675,13 +583,9 @@ describe('bounce_spf', function () {
     this.plugin.cfg.check.bounce_spf = false
 
     await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(this.check_host_Spy.notCalled)
+      assert.ok(this.SPF_constructor_Spy.notCalled)
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
-      assert.strictEqual(
-        this.connection.transaction.results.get(this.plugin),
-        undefined,
-      )
     }, this.connection)
   })
 
@@ -691,26 +595,19 @@ describe('bounce_spf', function () {
     )
 
     await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(this.check_host_Spy.notCalled)
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'isa',  'no'))
+      assert.ok(this.SPF_constructor_Spy.notCalled)
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
-      assert.strictEqual(this.connection.transaction.results.get(this.plugin).isa, false)
     }, this.connection)
   })
 
   it('no IPs', async function () {
     await this.plugin.bounce_spf((code, msg) => {
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'isa',  'yes'))
+      assert.ok(this.SPF_constructor_Spy.notCalled)
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
-      assert.ok(this.connection.transaction.results.get(this.plugin).isa)
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).skip.length,
-        0,
-      )
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).pass.length,
-        0,
-      )
     }, this.connection)
   })
 
@@ -720,19 +617,16 @@ describe('bounce_spf', function () {
       new Address.Address('test@example.com'),
     ]
 
-    this.check_host_Spy.returns(this.SPF_TEMPERROR)
+    this.SPF_check_host_Spy.returns(this.SPF_TEMPERROR)
 
     await this.plugin.bounce_spf((code, msg) => {
       sinon.assert.calledOnceWithExactly(
-        this.check_host_Spy,
+        this.SPF_check_host_Spy,
         '2001:db8::1',
         'example.com',
         'test@example.com',
       )
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).skip,
-        'bounce_spf',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip',  'bounce_spf'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
     }, this.connection)
@@ -744,22 +638,16 @@ describe('bounce_spf', function () {
       new Address.Address('test@example.com'),
     ]
 
-    this.check_host_Spy.returns(this.SPF_PERMERROR)
+    this.SPF_check_host_Spy.returns(this.SPF_PERMERROR)
 
     await this.plugin.bounce_spf((code, msg) => {
       sinon.assert.calledOnceWithExactly(
-        this.check_host_Spy,
+        this.SPF_check_host_Spy,
         '2001:db8::1',
         'example.com',
         'test@example.com',
       )
-      assert.ok(
-        this.connection.transaction.results.has(
-          this.plugin,
-          'skip',
-          'bounce_spf',
-        ),
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip',  'bounce_spf'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
     }, this.connection)
@@ -771,22 +659,16 @@ describe('bounce_spf', function () {
       new Address.Address('test@example.com'),
     ]
 
-    this.check_host_Spy.returns(this.SPF_NONE)
+    this.SPF_check_host_Spy.returns(this.SPF_NONE)
 
     await this.plugin.bounce_spf((code, msg) => {
       sinon.assert.calledOnceWithExactly(
-        this.check_host_Spy,
+        this.SPF_check_host_Spy,
         '2001:db8::1',
         'example.com',
         'test@example.com',
       )
-      assert.ok(
-        this.connection.transaction.results.has(
-          this.plugin,
-          'skip',
-          'bounce_spf',
-        ),
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip',  'bounce_spf'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
     }, this.connection)
@@ -799,22 +681,16 @@ describe('bounce_spf', function () {
       new Address.Address('test@example.com'),
     ]
 
-    this.check_host_Spy.returns(this.SPF_PASS)
+    this.SPF_check_host_Spy.returns(this.SPF_PASS)
 
     await this.plugin.bounce_spf((code, msg) => {
       sinon.assert.calledOnceWithExactly(
-        this.check_host_Spy,
+        this.SPF_check_host_Spy,
         '2001:db8::1',
         'example.com',
         'test@example.com',
       )
-      assert.ok(
-        this.connection.transaction.results.has(
-          this.plugin,
-          'pass',
-          'bounce_spf',
-        ),
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'bounce_spf'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
     }, this.connection)
@@ -827,20 +703,16 @@ describe('bounce_spf', function () {
       new Address.Address('test@example.com'),
     ]
 
-    this.check_host_Spy.returns(this.SPF_NEUTRAL)
+    this.SPF_check_host_Spy.returns(this.SPF_NEUTRAL)
 
     await this.plugin.bounce_spf((code, msg) => {
       sinon.assert.calledOnceWithExactly(
-        this.check_host_Spy,
+        this.SPF_check_host_Spy,
         '2001:db8::1',
         'example.com',
         'test@example.com',
       )
-      assert.ok(this.connection.transaction.results.get(this.plugin).isa)
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'bounce_spf',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'bounce_spf'))
       assert.equal(code, DENY)
       assert.equal(msg, 'Invalid bounce (spoofed sender)')
     }, this.connection)
@@ -853,20 +725,16 @@ describe('bounce_spf', function () {
       new Address.Address('test@example.com'),
     ]
 
-    this.check_host_Spy.returns(this.SPF_SOFTFAIL)
+    this.SPF_check_host_Spy.returns(this.SPF_SOFTFAIL)
 
     await this.plugin.bounce_spf((code, msg) => {
       sinon.assert.calledOnceWithExactly(
-        this.check_host_Spy,
+        this.SPF_check_host_Spy,
         '2001:db8::1',
         'example.com',
         'test@example.com',
       )
-      assert.ok(this.connection.transaction.results.get(this.plugin).isa)
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'bounce_spf',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'bounce_spf'))
       assert.equal(code, DENY)
       assert.equal(msg, 'Invalid bounce (spoofed sender)')
     }, this.connection)
@@ -880,20 +748,16 @@ describe('bounce_spf', function () {
     ]
     this.plugin.cfg.reject.bounce_spf = false
 
-    this.check_host_Spy.returns(this.SPF_FAIL)
+    this.SPF_check_host_Spy.returns(this.SPF_FAIL)
 
     await this.plugin.bounce_spf((code, msg) => {
       sinon.assert.calledOnceWithExactly(
-        this.check_host_Spy,
+        this.SPF_check_host_Spy,
         '2001:db8::1',
         'example.com',
         'test@example.com',
       )
-      assert.ok(this.connection.transaction.results.get(this.plugin).isa)
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'bounce_spf',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'bounce_spf'))
       assert.strictEqual(code, undefined)
       assert.strictEqual(msg, undefined)
     }, this.connection)
@@ -905,20 +769,16 @@ describe('bounce_spf', function () {
       new Address.Address('test@example.com'),
     ]
 
-    this.check_host_Spy.returns(this.SPF_FAIL)
+    this.SPF_check_host_Spy.returns(this.SPF_FAIL)
 
     await this.plugin.bounce_spf((code, msg) => {
       sinon.assert.calledOnceWithExactly(
-        this.check_host_Spy,
+        this.SPF_check_host_Spy,
         '2001:db8::1',
         'example.com',
         'test@example.com',
       )
-      assert.ok(this.connection.transaction.results.get(this.plugin).isa)
-      assert.equal(
-        this.connection.transaction.results.get(this.plugin).fail,
-        'bounce_spf',
-      )
+      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail',  'bounce_spf'))
       assert.equal(code, DENY)
       assert.equal(msg, 'Invalid bounce (spoofed sender)')
     }, this.connection)
