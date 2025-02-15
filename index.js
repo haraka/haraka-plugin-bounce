@@ -7,7 +7,7 @@ exports.register = function () {
   this.load_bounce_ini()
   this.load_bounce_bad_rcpt()
   this.load_host_list()
-  this.load_bounce_allowed_msgids()
+  this.load_allowed_msgid_domains()
 
   this.register_hook('mail', 'reject_all')
   this.register_hook('rcpt_ok', 'bad_rcpt')
@@ -34,12 +34,12 @@ exports.load_host_list = function () {
   this.cfg.host_list = raw_list.map((n) => n.toLowerCase())
 }
 
-exports.load_bounce_allowed_msgids = function () {
-  const raw_list = this.config.get('bounce_allowed_msgids', 'list', () => {
-    this.load_bounce_allowed_msgids()
+exports.load_allowed_msgid_domains = function () {
+  const raw_list = this.config.get('bounce_allowed_msgid_domains', 'list', () => {
+    this.load_allowed_msgid_domains()
   })
 
-  this.cfg.allowed_msgids = raw_list.map((n) => n.toLowerCase())
+  this.cfg.allowed_msgid_domains = raw_list.map((n) => n.toLowerCase())
 }
 
 exports.load_bounce_ini = function () {
@@ -52,12 +52,12 @@ exports.load_bounce_ini = function () {
         '+check.bounce_spf',
         '+check.non_local_msgid',
 
-        '-reject.all_bounces',
         '+reject.single_recipient',
         '-reject.empty_return_path',
-        '+reject.bad_rcpt',
         '-reject.bounce_spf',
         '-reject.non_local_msgid',
+        '+reject.bad_rcpt',
+        '-reject.all_bounces',
       ],
     },
     () => {
@@ -134,7 +134,7 @@ exports.single_recipient = function (next, connection) {
 
 exports.empty_return_path = function (next, connection) {
   if (!this.cfg.check.empty_return_path) return next()
- 
+
   const { transaction } = connection
   if (!transaction) return next()
 
@@ -179,7 +179,7 @@ exports.bad_rcpt = function (next, connection, rcpt) {
 
   if (this.cfg.invalid_addrs.includes(rcpt.address().toLowerCase())) {
     transaction.results.add(this, { fail: 'bad_rcpt', emit: true })
-    return next(DENY, 'That recipient does not accept bounces')
+    return next(DENY, `${rcpt.address()} does not accept bounces`)
   }
   transaction.results.add(this, { pass: 'bad_rcpt' })
 
@@ -191,7 +191,7 @@ exports.has_null_sender = function (transaction) {
   // null sender could also be tested with mail_from.user
   // Why would isNull() exist if it wasn't the right way to test this?
   const is_null_sender = !!transaction.mail_from.isNull()
-  transaction.results.add(this, { isa: is_null_sender })
+  transaction.results.add(this, { isa: is_null_sender ? 'yes' : 'no' })
   return is_null_sender
 }
 
@@ -252,7 +252,7 @@ exports.non_local_msgid = function (next, connection) {
     }
 
     // is domain allowed?
-    if (this.cfg.allowed_msgids.includes(domain)) {
+    if (this.cfg.allowed_msgid_domains.includes(domain)) {
       connection.loginfo(this, `non_local_msgid: domain matches allowed msgid`)
       transaction.results.add(this, { pass: 'Message-ID allowed domain' })
       return next()
