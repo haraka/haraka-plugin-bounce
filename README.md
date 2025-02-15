@@ -24,13 +24,19 @@ non_local_msgid=true
 [reject]
 single_recipient=true
 empty_return_path=false
-bad_rcpt=true
 bounce_spf=false
 non_local_msgid=false
+bad_rcpt=true
 all_bounces=false
 ```
 
 ## Features
+
+### all_bounces
+
+When enabled, blocks all bounce messages using the simple rule of checking for `MAIL FROM:<>`.
+
+It is generally a bad idea to block all bounces. This option can be useful for mail servers at domains with frequent spoofing and few or no human users.
 
 ### single_recipient
 
@@ -44,9 +50,9 @@ Valid bounces should have an empty return path. Test for the presence of the Ret
 
 ### bad_rcpt
 
-Disallow bounces to email addresses listed in `config/bounce_bad_rcpt`.
+When enabled, rejects bounces to email addresses listed in `config/bounce_bad_rcpt`.
 
-Include email addresses in that file that should _never_ receive bounce messages. Examples of email addresses that should be listed are: autoresponders, do-not-reply@example.com, dmarc-feedback@example.com, and any other email addresses used solely for machine generated messages.
+Include email addresses that should _never_ receive bounce messages. Examples of email addresses that should be listed are: autoresponders, do-not-reply@example.com, dmarc-feedback@example.com, and any other email addresses used solely for machine generated messages.
 
 ### bounce_spf
 
@@ -54,11 +60,11 @@ Parses the message body and any MIME parts for Received: headers and strips out 
 
 If no 'Pass' result is found, then this test will fail. If SPF returns 'None', 'TempError' or 'PermError' then the test will be skipped.
 
-### all_bounces
+### non_local_msgid
 
-When enabled, blocks all bounce messages using the simple rule of checking for `MAIL FROM:<>`.
+Parses the message body and any MIME parts for Message-ID: headers and strips out the host name. If the host name is not a local domain, the bounce will be rejected.
 
-It is generally a bad idea to block all bounces. This option can be useful for mail servers at domains with frequent spoofing and few or no human users.
+This test needs to know which domains are 'local' to your mail server. If you use the rcpt_to.in_host_list plugin and have populated the `config/host_list` file, then you're done. Alternatively you can populate the `config/bounce_msgid_allowed_domains` with a list of local domains. 
 
 ## USAGE
 
@@ -75,3 +81,5 @@ $EDITOR config/bounce.ini
 [ci-url]: https://github.com/haraka/haraka-plugin-bounce/actions/workflows/ci.yml
 [clim-img]: https://codeclimate.com/github/haraka/haraka-plugin-bounce/badges/gpa.svg
 [clim-url]: https://codeclimate.com/github/haraka/haraka-plugin-bounce
+[npm-img]: https://nodei.co/npm/haraka-plugin-bounce.png
+[npm-url]: https://www.npmjs.com/package/haraka-plugin-bounce
