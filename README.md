@@ -64,7 +64,7 @@ If no 'Pass' result is found, then this test will fail. If SPF returns 'None', '
 
 Parses the message body and any MIME parts for Message-ID: headers and strips out the host name. If the host name is not a local domain, the bounce will be rejected.
 
-This test needs to know which domains are 'local' to your mail server. If you use the rcpt_to.in_host_list plugin and have populated the `config/host_list` file, then you're done. Alternatively you can populate the `config/bounce_msgid_allowed_domains` with a list of local domains. 
+This test needs to know which domains are 'local' to your mail server. If you use the rcpt_to.in_host_list plugin and have populated the `config/host_list` file, then you're done. Alternatively you can populate the `config/bounce_msgid_allowed_domains` with a list of local domains.
 
 ## USAGE
 
