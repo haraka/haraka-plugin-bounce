@@ -5,6 +5,19 @@ engines:
     config:
       config: 'eslint.config.mjs'
 
+checks:
+  return-statements:
+    enabled: false
+  method-lines:
+    config:
+      threshold: 50
+  method-complexity:
+    config:
+      threshold: 20
+  file-lines:
+    config:
+      threshold: 1000
+
 ratings:
   paths:
     - '**.js'
