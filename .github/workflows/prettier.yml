@@ -1,4 +1,4 @@
-name: CI - Prettier
+name: Prettier
 
 on:
   pull_request:
