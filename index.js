@@ -35,9 +35,13 @@ exports.load_host_list = function () {
 }
 
 exports.load_allowed_msgid_domains = function () {
-  const raw_list = this.config.get('bounce_allowed_msgid_domains', 'list', () => {
-    this.load_allowed_msgid_domains()
-  })
+  const raw_list = this.config.get(
+    'bounce_allowed_msgid_domains',
+    'list',
+    () => {
+      this.load_allowed_msgid_domains()
+    },
+  )
 
   this.cfg.allowed_msgid_domains = raw_list.map((n) => n.toLowerCase())
 }
@@ -195,14 +199,14 @@ exports.has_null_sender = function (transaction) {
   return is_null_sender
 }
 
-const message_id_re = /^Message-ID:\s*<[^@>]+@([^>]+)>/gim  // this should match on the host name
+const message_id_re = /^Message-ID:\s*<[^@>]+@([^>]+)>/gim // this should match on the host name
 
 function find_message_id_headers(domains, body, connection, self) {
   if (!body) return
 
- const matches = body.bodytext.matchAll(message_id_re);
- for (const match of matches) {
-    domains.add(match[1].toLowerCase());
+  const matches = body.bodytext.matchAll(message_id_re)
+  for (const match of matches) {
+    domains.add(match[1].toLowerCase())
   }
 
   for (const child of body.children) {
@@ -239,10 +243,7 @@ exports.non_local_msgid = function (next, connection) {
     connection.loginfo(this, 'no Message-ID matches')
     transaction.results.add(this, { fail: 'Message-ID' })
     if (!this.cfg.reject.non_local_msgid) return next()
-    return next(
-      DENY,
-      `bounce without Message-ID in headers, I didn't send it`,
-    )
+    return next(DENY, `bounce without Message-ID in headers, I didn't send it`)
   }
 
   for (const domain of domains) {
@@ -279,7 +280,10 @@ exports.non_local_msgid = function (next, connection) {
     connection.loginfo(this, 'no domain(s) parsed from Message-ID headers')
     transaction.results.add(this, { fail: 'Message-ID parseable' })
     if (!this.cfg.reject.non_local_msgid) return next()
-    return next(DENY, `bounce Message-ID without valid domain, I didn't send it`)
+    return next(
+      DENY,
+      `bounce Message-ID without valid domain, I didn't send it`,
+    )
   }
 
   transaction.results.add(this, { fail: 'Message-ID non-local domain' })
