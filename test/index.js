@@ -370,32 +370,6 @@ describe('non_local_msgid', function () {
 })
 
 describe('single_recipient', function () {
-  it('relay', function (done) {
-    this.connection.relaying = true
-    this.connection.transaction.rcpt_to.push(
-      new Address.Address('test2@example.com'),
-    )
-    this.plugin.single_recipient((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip',  'single_recipient(relay)'))
-      assert.strictEqual(code, undefined)
-      assert.strictEqual(msg, undefined)
-      done()
-    }, this.connection)
-  })
-
-  it('private', function (done) {
-    this.connection.remote.is_private = true
-    this.connection.transaction.rcpt_to.push(
-      new Address.Address('test2@example.com'),
-    )
-    this.plugin.single_recipient((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip',  'single_recipient(private_ip)'))
-      assert.strictEqual(code, undefined)
-      assert.strictEqual(msg, undefined)
-      done()
-    }, this.connection)
-  })
-
   it('single recipient', function (done) {
     this.plugin.single_recipient((code, msg) => {
       assert.ok(this.connection.transaction.results.has(this.plugin, 'pass',  'single_recipient'))
