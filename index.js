@@ -89,7 +89,7 @@ exports.reject_all = function (next, connection) {
 exports.single_recipient = function (next, connection) {
   if (!this.cfg.check.single_recipient) return next()
 
-  const { transaction, relaying, remote } = connection
+  const { transaction } = connection
   if (!transaction) return next()
 
   if (!this.has_null_sender(transaction)) return next()
