@@ -1,6 +1,6 @@
 {
   "name": "haraka-plugin-bounce",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Provide options for Haraka bounce processing",
   "main": "index.js",
   "files": [
