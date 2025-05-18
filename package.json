@@ -1,7 +1,7 @@
 {
   "name": "haraka-plugin-bounce",
-  "version": "1.0.5",
-  "description": "Provide options for Haraka bounce processing",
+  "version": "2.0.0",
+  "description": "Provide multiple configurable strategies to detect, validate, and process email bounces",
   "main": "index.js",
   "files": [
     "CHANGELOG.md",
@@ -35,14 +35,14 @@
   "dependencies": {
     "address-rfc2821": "^2.1.2",
     "haraka-net-utils": "^1.7.1",
-    "haraka-plugin-spf": "^1.2.9",
-    "haraka-tld": "^1.2.3"
+    "haraka-plugin-spf": "^1.2.9"
   },
   "devDependencies": {
     "@haraka/eslint-config": "^2.0.2",
-    "haraka-email-message": "^1.2.4",
     "haraka-test-fixtures": "1.3.8",
-    "sinon": "^19.0.2"
+    "mocha": "^11.1.0",
+    "prettier": "^3.5.3",
+    "sinon": "^20.0.0"
   },
   "prettier": {
     "singleQuote": true,
