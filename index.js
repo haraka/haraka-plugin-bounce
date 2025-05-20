@@ -9,20 +9,16 @@ exports.register = function () {
   this.load_bounce_bad_rcpt()
   this.load_bounce_whitelist()
 
-  if (this.cfg.reject.all_bounces) this.register_hook('mail', 'reject_all')
-  if (this.cfg.reject.bad_rcpt) this.register_hook('rcpt_ok', 'bad_rcpt')
-  if (this.cfg.check.single_recipient)
-    this.register_hook('data', 'single_recipient')
-  if (this.cfg.check.bounce_spf) this.register_hook('data', 'bounce_spf_enable')
+  this.register_hook('mail', 'reject_all')
+  this.register_hook('rcpt_ok', 'bad_rcpt')
+  this.register_hook('data', 'single_recipient')
+  this.register_hook('data', 'bounce_spf_enable')
   // must run before the Headers plugin's invalid_return_path() as it removes Return-Path headers.
-  if (this.cfg.check.empty_return_path)
-    this.register_hook('data_post', 'empty_return_path', 25)
-  if (this.cfg.check.hash_validation)
-    this.register_hook('data_post', 'create_validation_hash')
-  if (this.cfg.check.hash_validation)
-    this.register_hook('data_post', 'validate_bounce')
-  if (this.cfg.check.hash_date) this.register_hook('data_post', 'validate_date')
-  if (this.cfg.check.bounce_spf) this.register_hook('data_post', 'bounce_spf')
+  this.register_hook('data_post', 'empty_return_path', 25)
+  this.register_hook('data_post', 'create_validation_hash')
+  this.register_hook('data_post', 'validate_bounce')
+  this.register_hook('data_post', 'validate_date')
+  this.register_hook('data_post', 'bounce_spf')
 }
 
 exports.load_bounce_ini = function () {
