@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### [2.0.0] - 2025-05-20
 
 Changes to config/bounce.ini
+
 - removed check.non_local_msgid
 - removed reject.non_local_msgid
 - added check.hash_validation
@@ -18,9 +19,11 @@ Changes to config/bounce.ini
 - added validation.secret
 
 Added config/bounce_whitelist.json
+
 - combinations of sender/recipient that should skip validation
 
 Changes to test/index.js
+
 - removed requirement for haraka-email-message
 - removed tests for non_local_msgid
 - added tests for create_validation_hash
@@ -30,39 +33,41 @@ Changes to test/index.js
 - added tests for find_received_headers
 - added tests for validate_hash_date
 - replaced most sinon.stub with sinon.spy to better monitor code
-behavior
+  behavior
 - refactored many tests to make better use of sinon spies and assertions
 
 Changes to index.js
+
 - removed load_host_list()
 - removed load_allowed_msgid_domains()
 - removed non_local_msgid()
 - removed find_message_id_headers()
 - added create_validation_hash - creates a cryptographic validation hash
-for outbound emails
+  for outbound emails
 - added validate_date - reject if original email was sent before the
-configured number of days
+  configured number of days
 - added validate_bounce - validates the bounce by comparing the hash
-created on the original email
+  created on the original email
 - added find_bounce_headers - grab Date, From, Message-ID, and hash
-headers from the body of the bounce
+  headers from the body of the bounce
 - added should_skip - determines whether validation checks should be
-skipped
+  skipped
 - added is_whitelisted - checks to see if a From:To pair is whitelisted
 - added checks to only register a hook if it is configured
 - added descriptive messages to all transaction.results
 
 Changes to package.json
+
 - added devDependencies (mocha and prettier)
 - removed dependency for haraka-tld
 - removed dependency for haraka-email-message
 
 Changes to README.md
+
 - removed documentation for non_local_msgid
 - added documentation for the validation header
 - added documentation for the validation_date
 - Removed single_recipient checks for relaying and private IPs (#6)
-
 
 ### [1.0.5] - 2025-02-15
 
