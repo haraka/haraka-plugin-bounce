@@ -13,7 +13,7 @@ beforeEach(function () {
   this.connection.remote.ip = '8.8.8.8'
   this.connection.relaying = false
   this.connection.transaction = fixtures.transaction.createTransaction()
-  this.connection.transaction.results = new fixtures.results(this.connection)
+  this.connection.init_transaction()
   this.connection.transaction.mail_from = new Address.Address('<>')
   this.connection.transaction.rcpt_to.push(
     new Address.Address('test@example.com'),
@@ -34,12 +34,16 @@ describe('register', function () {
 
   it('registers hooks', function () {
     assert.ok(this.plugin.register_hook.called)
-    assert.equal(this.plugin.register_hook.args.length, 5)
-    assert.equal(this.plugin.register_hook.args[0][1], 'bad_rcpt')
-    assert.equal(this.plugin.register_hook.args[1][1], 'single_recipient')
-    assert.equal(this.plugin.register_hook.args[2][1], 'bounce_spf_enable')
-    assert.equal(this.plugin.register_hook.args[3][1], 'validate_date')
-    assert.equal(this.plugin.register_hook.args[4][1], 'bounce_spf')
+    assert.equal(this.plugin.register_hook.args.length, 9)
+    assert.equal(this.plugin.register_hook.args[0][1], 'reject_all')
+    assert.equal(this.plugin.register_hook.args[1][1], 'bad_rcpt')
+    assert.equal(this.plugin.register_hook.args[2][1], 'single_recipient')
+    assert.equal(this.plugin.register_hook.args[3][1], 'bounce_spf_enable')
+    assert.equal(this.plugin.register_hook.args[4][1], 'empty_return_path')
+    assert.equal(this.plugin.register_hook.args[5][1], 'create_validation_hash')
+    assert.equal(this.plugin.register_hook.args[6][1], 'validate_bounce')
+    assert.equal(this.plugin.register_hook.args[7][1], 'validate_date')
+    assert.equal(this.plugin.register_hook.args[8][1], 'bounce_spf')
   })
 })
 
@@ -176,6 +180,16 @@ describe('reject_all', function () {
     }, this.connection)
   })
 
+  it('reject_all - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
+  })
+
   it('will ignore outbound mail', function (done) {
     this.connection.relaying = true
 
@@ -226,6 +240,16 @@ describe('empty_return_path', function () {
     this.plugin.cfg.check.empty_return_path = true
     this.plugin.cfg.reject.empty_return_path = true
     should_skip_spy = sinon.spy(this.plugin, 'should_skip')
+  })
+
+  it('empty_return_path - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
   })
 
   it('missing Return-Path header', function (done) {
@@ -315,6 +339,16 @@ describe('empty_return_path', function () {
 })
 
 describe('single_recipient', function () {
+  it('single_recipient - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
+  })
+
   it('will not check for single recipient', function (done) {
     const should_skip_spy = sinon.spy(this.plugin, 'should_skip')
 
@@ -408,6 +442,16 @@ describe('bad_rcpt', function () {
     )
   })
 
+  it('bad_rcpt - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
+  })
+
   it('will check for valid recipient', function (done) {
     this.plugin.cfg.invalid_addrs = []
     const rcpt = new Address.Address('test@example.com')
@@ -490,6 +534,16 @@ describe('has_null_sender', function () {
 })
 
 describe('bounce_spf_enable', function () {
+  it('bounce_spf_enable - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
+  })
+
   it('is outbound mail', function (done) {
     this.connection.relaying = true
 
@@ -535,6 +589,16 @@ describe('bounce_spf', function () {
     check_host_stub = sinon.stub(SPF.prototype, 'check_host')
 
     spf = new SPF()
+  })
+
+  it('bounce_spf - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
   })
 
   it('skip SPF check', async function () {
@@ -827,6 +891,16 @@ describe('create_validation_hash', function () {
     )
   })
 
+  it('create_validation_hash - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
+  })
+
   it('should not create validation hash', function (done) {
     this.plugin.cfg.check.hash_validation = false
 
@@ -935,6 +1009,16 @@ describe('validate_bounce', function () {
     this.connection.transaction.notes.set('bounce.headers', headers)
 
     should_skip_spy = sinon.spy(this.plugin, 'should_skip')
+  })
+
+  it('validate_bounce - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
   })
 
   it('should skip validation check', function (done) {
@@ -1627,6 +1711,16 @@ describe('validate_date', function () {
     date_header = new Date().toISOString()
 
     find_bounce_headers_spy = sinon.spy(this.plugin, 'find_bounce_headers')
+  })
+
+  it('validate_date - missing transaction', function (done) {
+    delete this.connection.transaction
+
+    this.plugin.empty_return_path((code, msg) => {
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
+      done()
+    }, this.connection)
   })
 
   it('skips when invalid date header', function (done) {
