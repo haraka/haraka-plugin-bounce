@@ -2,7 +2,7 @@
 const { SPF } = require('haraka-plugin-spf')
 const net_utils = require('haraka-net-utils')
 const crypto = require('node:crypto')
-const Address = require('address-rfc2821').Address
+const addrparser = require('address-rfc2822')
 
 exports.register = function () {
   this.load_bounce_ini()
@@ -543,7 +543,7 @@ exports.validate_bounce = function (next, connection) {
     const from_header = transaction.header.get_decoded('From').toLowerCase()
     let from
     try {
-      from = new Address(from_header).address()
+      from = addrparser.parse(from_header)[0].address
     } catch (err) {
       // ignore error
       connection.logerror(this, `validate_bounce: error: ${err.message}`)
