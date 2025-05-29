@@ -2,7 +2,7 @@
 const { SPF } = require('haraka-plugin-spf')
 const net_utils = require('haraka-net-utils')
 const crypto = require('node:crypto')
-const Address = require('address-rfc2821').Address
+const addrparser = require('address-rfc2822')
 
 exports.register = function () {
   this.load_bounce_ini()
@@ -13,8 +13,8 @@ exports.register = function () {
   this.register_hook('rcpt_ok', 'bad_rcpt')
   this.register_hook('data', 'single_recipient')
   this.register_hook('data', 'bounce_spf_enable')
-  // must run before the Headers plugin's invalid_return_path() as it removes Return-Path headers.
-  this.register_hook('data_post', 'empty_return_path', 25)
+  // must run before the Headers plugin's invalid_return_path() which removes Return-Path headers.
+  this.register_hook('data_post', 'empty_return_path', -5)
   this.register_hook('data_post', 'create_validation_hash')
   this.register_hook('data_post', 'validate_bounce')
   this.register_hook('data_post', 'validate_date')
@@ -543,7 +543,7 @@ exports.validate_bounce = function (next, connection) {
     const from_header = transaction.header.get_decoded('From').toLowerCase()
     let from
     try {
-      from = new Address(from_header).address()
+      from = addrparser.parse(from_header)[0].address
     } catch (err) {
       // ignore error
       connection.logerror(this, `validate_bounce: error: ${err.message}`)
