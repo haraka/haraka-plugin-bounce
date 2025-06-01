@@ -1240,7 +1240,7 @@ describe('validate_bounce', function () {
     }, this.connection)
   })
 
-  it.only('is missing hash header and address parsing fails', function (done) {
+  it('is missing hash header and address parsing fails', function (done) {
     const from = 'mail delivery system <mailer-daemon@example.com>'
     const rcpt = new Address.Address('test@example.com')
 
@@ -1332,6 +1332,8 @@ describe('validate_bounce', function () {
   })
 
   it('is missing hash header', function (done) {
+    const from = '<info@example.net>'
+    this.connection.transaction.add_header('From', from)
     this.plugin.cfg.reject.hash_validation = false
 
     delete this.connection.transaction.notes.bounce.headers.hash
@@ -1358,6 +1360,9 @@ describe('validate_bounce', function () {
   })
 
   it('will deny when missing hash header', function (done) {
+    const from = '<info@example.net>'
+    this.connection.transaction.add_header('From', from)
+
     delete this.connection.transaction.notes.bounce.headers.hash
 
     this.plugin.validate_bounce((code, msg) => {
