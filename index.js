@@ -545,8 +545,12 @@ exports.validate_bounce = function (next, connection) {
     try {
       from = addrparser.parse(from_header)[0].address
     } catch (err) {
-      // ignore error
-      connection.logerror(this, `validate_bounce: error: ${err.message}`)
+      transaction.results.add(this, {
+        skip: 'validate_bounce',
+        msg: 'invalid from header',
+        emit: true,
+      })
+      return next()
     }
     const rcpt = transaction.rcpt_to[0].address().toLowerCase()
 
