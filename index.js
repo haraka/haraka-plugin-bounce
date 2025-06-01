@@ -541,10 +541,13 @@ exports.validate_bounce = function (next, connection) {
     }
   } else if (from && date && message_id) {
     const from_header = transaction.header.get_decoded('From').toLowerCase()
-    let from
+    let parsed_from
     try {
-      from = addrparser.parse(from_header)[0].address
+      parsed_from = addrparser.parse(from_header)[0].address
     } catch (err) {
+      // ignore error
+      connection.loginfo(this, `address-rfc2822 parsing error: ${err.message}`)
+
       transaction.results.add(this, {
         skip: 'validate_bounce',
         msg: 'invalid from header',
@@ -552,9 +555,10 @@ exports.validate_bounce = function (next, connection) {
       })
       return next()
     }
+
     const rcpt = transaction.rcpt_to[0].address().toLowerCase()
 
-    if (this.is_whitelisted(rcpt, from)) {
+    if (this.is_whitelisted(rcpt, parsed_from)) {
       transaction.results.add(this, {
         skip: 'validate_bounce',
         msg: 'whitelisted',
