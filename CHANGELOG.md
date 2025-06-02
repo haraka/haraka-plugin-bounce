@@ -119,5 +119,5 @@ Changes to README.md
 [1.0.3]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v1.0.3
 [1.0.4]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v1.0.4
 [1.0.5]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v1.0.5
-[2.0.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.0.1
 [2.0.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.0.0
+[2.0.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.0.1
