@@ -1,6 +1,6 @@
 {
   "name": "haraka-plugin-bounce",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Provide multiple configurable strategies to detect, validate, and process email bounces",
   "main": "index.js",
   "files": [

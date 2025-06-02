@@ -4,6 +4,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [2.0.1] - 2025-06-02
+
+- empty_return_path must run before the Headers plugin #11
+- Fixed From header parsing error #10
+
 ### [2.0.0] - 2025-05-20
 
 Changes to config/bounce.ini
@@ -115,3 +120,4 @@ Changes to README.md
 [1.0.4]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v1.0.4
 [1.0.5]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v1.0.5
 [2.0.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.0.1
+[2.0.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.0.0
