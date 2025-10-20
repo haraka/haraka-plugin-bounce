@@ -1,6 +1,6 @@
 {
   "name": "haraka-plugin-bounce",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Provide multiple configurable strategies to detect, validate, and process email bounces",
   "main": "index.js",
   "files": [
@@ -39,10 +39,10 @@
   },
   "devDependencies": {
     "@haraka/eslint-config": "^2.0.2",
-    "haraka-test-fixtures": "1.3.9",
+    "haraka-test-fixtures": "^1.3.10",
     "mocha": "^11.4.0",
     "prettier": "^3.5.3",
-    "sinon": "^20.0.0"
+    "sinon": "^21.0.0"
   },
   "prettier": {
     "singleQuote": true,
