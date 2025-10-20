@@ -4,6 +4,8 @@ const net_utils = require('haraka-net-utils')
 const crypto = require('node:crypto')
 const addrparser = require('address-rfc2822')
 
+const MAX_HASH_AGE_DAYS = 6
+
 exports.register = function () {
   this.load_bounce_ini()
   this.load_bounce_bad_rcpt()
@@ -17,6 +19,7 @@ exports.register = function () {
   this.register_hook('data_post', 'empty_return_path', -5)
   this.register_hook('data_post', 'create_validation_hash')
   this.register_hook('data_post', 'validate_bounce')
+  // must run after validate_bounce
   this.register_hook('data_post', 'validate_date')
   this.register_hook('data_post', 'bounce_spf')
 }
@@ -39,6 +42,8 @@ exports.load_bounce_ini = function () {
         '-reject.all_bounces',
         '-reject.hash_validation',
         '-reject.hash_date',
+        
+        '-skip.remaining_plugins',
       ],
     },
     () => this.load_bounce_ini(),
@@ -53,7 +58,7 @@ exports.load_bounce_ini = function () {
 
 exports.validate_config = function () {
   if (!this.cfg.validation.max_hash_age_days)
-    this.cfg.validation.max_hash_age_days = 6
+    this.cfg.validation.max_hash_age_days = MAX_HASH_AGE_DAYS
   if (!this.cfg.validation.hash_algorithm)
     this.cfg.validation.hash_algorithm = 'sha256'
 
@@ -70,11 +75,12 @@ exports.validate_config = function () {
   if (this.cfg.reject.hash_validation && !this.cfg.check.hash_validation) {
     this.cfg.check.hash_validation = true
   }
+
+  if (!this.cfg.check.hash_validation) return
+
   if (this.cfg.reject.hash_date && !this.cfg.check.hash_date) {
     this.cfg.check.hash_date = true
   }
-
-  if (!this.cfg.check.hash_validation) return
 
   // confirm that hash algorithm is supported
   const algorithms = crypto.getHashes()
@@ -326,7 +332,7 @@ exports.bounce_spf_enable = function (next, connection) {
  * Note: This only applies to inbound messages with a null sender.
  */
 exports.bounce_spf = async function (next, connection) {
-  if (!connection?.transaction) return next()
+  if (!connection?.transaction?.body) return next()
   if (!this.cfg.check.bounce_spf) return next()
   if (this.should_skip(connection)) return next()
   if (connection.transaction.results.has(this, 'pass', 'validate_bounce'))
@@ -446,11 +452,6 @@ exports.create_validation_hash = function (next, connection) {
 
   // are any of these headers missing?
   if (!from_header || !date_header || !message_id_header) {
-    connection.logerror(
-      this,
-      `missing header - bounce validation has been disabled`,
-    )
-    this.cfg.check.hash_validation = false
     return next()
   }
 
@@ -474,17 +475,33 @@ exports.create_validation_hash = function (next, connection) {
  * 2. Recreates the amalgamated string (from:date:message_id)
  * 3. Generates a new HMAC hash using the same algorithm and secret
  * 4. Performs a timing-safe comparison between the generated hash and the one in the bounce
+ * 5. If hash matches, validates the age of the bounce using the Date header
+ * 6. If no hash found but headers present, checks against whitelist
  *
  * Security features:
  * - Uses crypto.timingSafeEqual() to prevent timing attacks
+ * - Validates bounce age to prevent replay attacks with old messages
  * - Checks that all required headers are present
  * - Ensures hash length matches to prevent buffer comparison issues
- * - Falls back to whitelist checking if hash validation isn't possible
+ * - Falls back to whitelist checking when hash is missing but headers are present
+ *
+ * Configuration options:
+ * - check.hash_validation (boolean): Enable hash-based validation
+ * - reject.hash_validation (boolean): Reject bounces that fail hash validation
+ * - reject.hash_date (boolean): Reject bounces with expired or invalid dates
+ * - skip.remaining_plugins (boolean): Skip remaining plugins if validation passes
+ * - validation.max_hash_age_days (number): Maximum age in days for bounce messages
  *
  * Result states:
- * - pass: Hash matches, bounce is considered legitimate
- * - fail: Hash mismatch or missing required headers
- * - skip: Bounce validation skipped (whitelisted or headers missing)
+ * - pass(validate_bounce): Hash matches and date is valid, bounce is legitimate
+ * - fail(validate_bounce): Hash mismatch, missing headers, or not whitelisted
+ * - fail(bounce_date): Hash matches but date is expired or invalid
+ * - skip(validate_bounce): Whitelisted sender, invalid from header, or missing all headers
+ *
+ * Special handling:
+ * - When validation passes and skip.remaining_plugins is enabled, returns OK to skip remaining plugins
+ * - When hash is missing but From/Date/Message-ID are present, checks whitelist
+ * - Whitelist supports exact matches and domain wildcards (e.g., *@example.com)
  *
  * Note: This only applies to inbound messages with a null sender.
  */
@@ -499,7 +516,8 @@ exports.validate_bounce = function (next, connection) {
     transaction,
     transaction.body,
   )
-  if (this.cfg.check.hash_validation && hash) {
+
+  if (hash) {
     const amalgam = `${from}:${date}:${message_id}`
 
     const bounce_hash = crypto
@@ -517,8 +535,24 @@ exports.validate_bounce = function (next, connection) {
       const buff_2 = Buffer.concat([Buffer.from(hash)], bounce_hash.length)
 
       if (crypto.timingSafeEqual(buff_1, buff_2)) {
-        transaction.results.add(this, { pass: 'validate_bounce' })
-        return next()
+        const result = this.is_date_valid(date)
+        if (result.valid) {
+          transaction.results.add(this, { pass: 'validate_bounce' })
+          if (this.cfg.skip.remaining_plugins) {
+            return next(OK)
+          }
+          return next()
+        } else {
+          transaction.results.add(this, {
+            fail: 'bounce_date',
+            msg: result.msg,
+            emit: true,
+          })
+          if (this.cfg.reject.hash_date) {
+            return next(DENY, 'invalid bounce')
+          }
+          return next()
+        }
       }
 
       msg =
@@ -585,64 +619,21 @@ exports.validate_bounce = function (next, connection) {
   next()
 }
 
-/*
- * Validates the date of the original message in bounce messages.
- *
- * This function:
- * 1. Extracts the Date header from the original message in the bounce
- * 2. Calculates the age of the original message
- * 3. Rejects bounces for messages older than max_hash_age_days
- *
- * This helps prevent delayed bounce attacks where attackers replay
- * old bounce messages or forge bounces with backdated timestamps.
- *
- * Configuration options:
- * - check.hash_date (boolean): Enable this check
- * - reject.hash_date (boolean): Reject messages that fail this check
- * - validation.max_hash_age_days (number): Maximum age in days for valid bounces
- *
- * Note: This only applies to inbound messages with a null sender.
- */
-exports.validate_date = function (next, connection) {
-  if (!connection?.transaction?.body) return next()
-  if (!this.cfg.check.hash_date) return next()
-  if (this.should_skip(connection)) return next()
-
-  const { transaction } = connection
-
-  const { date } = this.find_bounce_headers(transaction, transaction.body)
-  if (date) {
-    // Parse the date that the original email was sent
-    const email_date = new Date(date)
-    if (isNaN(email_date.getTime())) {
-      transaction.results.add(this, {
-        skip: 'bounce_date',
-        msg: 'invalid date header',
-      })
-      return next()
-    }
-
-    // calculate the number of days since the original email was sent
-    const age = Math.floor((new Date() - email_date) / (1000 * 60 * 60 * 24))
-    if (age > this.cfg.validation.max_hash_age_days) {
-      transaction.results.add(this, {
-        fail: 'bounce_date',
-        msg: 'hash is too old',
-        emit: true,
-      })
-      if (this.cfg.reject.hash_date) {
-        return next(DENY, 'invalid bounce')
-      }
-    } else {
-      transaction.results.add(this, { pass: 'bounce_date' })
-    }
-  } else {
-    transaction.results.add(this, {
-      skip: 'bounce_date',
-      msg: 'missing date header',
-    })
+exports.is_date_valid = function (date) {
+  // Parse the date that the original email was sent
+  const email_date = new Date(date)
+  if (isNaN(email_date.getTime())) {
+    console.log("INVALID DATE HEADER")
+    return {valid: false, msg: 'invalid date header'}
   }
-  next()
+
+  // calculate the number of days since the original email was sent
+  const age = Math.floor((new Date() - email_date) / (1000 * 60 * 60 * 24))
+  if (age > this.cfg.validation.max_hash_age_days) {
+    return {valid: false, msg: 'hash is too old'}
+  }
+
+  return {valid: true}
 }
 
 // Lazy regexp to get IPs from Received: headers in bounces
@@ -668,52 +659,39 @@ exports.find_received_headers = function (body, ips = new Set()) {
   return ips
 }
 
-exports.find_bounce_headers = function (transaction, body) {
+exports.find_bounce_headers = function (body) {
   const headers = {}
-  if (!body) return headers
-
-  const body_headers = transaction.notes.get('bounce.headers') ?? {}
-  if (
-    body_headers.from ||
-    body_headers.date ||
-    body_headers.message_id ||
-    body_headers.hash
-  )
-    return body_headers
 
   // Check the current body part
-  if (body.bodytext?.length) {
+  if (body?.bodytext?.length) {
     headers.from = extract_header(body.bodytext, 'From')
     headers.date = extract_header(body.bodytext, 'Date')
     headers.message_id = extract_header(body.bodytext, 'Message-ID')
     headers.hash = extract_header(body.bodytext, 'X-Haraka-Bounce-Validation')
 
-    // Check if any headers were found
+    // were any headers were found?
     if (headers.from || headers.date || headers.message_id || headers.hash) {
-      transaction.notes.set('bounce.headers', headers)
       return headers
     }
   }
 
   // Recursively check children
-  if (body.children?.length) {
+  if (body?.children?.length) {
     for (const child of body.children) {
-      const child_hdrs = this.find_bounce_headers(transaction, child)
+      const child_hdrs = this.find_bounce_headers(child)
 
-      // Only return if any useful headers were found
+      // were any headers were found?
       if (
         child_hdrs.from ||
         child_hdrs.date ||
         child_hdrs.message_id ||
         child_hdrs.hash
       ) {
-        transaction.notes.set('bounce.headers', headers)
         return child_hdrs
       }
     }
   }
 
-  transaction.notes.set('bounce.headers', headers)
   return headers
 }
 
