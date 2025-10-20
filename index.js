@@ -42,7 +42,7 @@ exports.load_bounce_ini = function () {
         '-reject.all_bounces',
         '-reject.hash_validation',
         '-reject.hash_date',
-        
+
         '-skip.remaining_plugins',
       ],
     },
@@ -623,7 +623,6 @@ exports.is_date_valid = function (date) {
   // Parse the date that the original email was sent
   const email_date = new Date(date)
   if (isNaN(email_date.getTime())) {
-    console.log("INVALID DATE HEADER")
     return {valid: false, msg: 'invalid date header'}
   }
 
