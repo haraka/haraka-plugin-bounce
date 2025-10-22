@@ -28,8 +28,14 @@ afterEach(sinon.restore)
 describe('register', function () {
   it('should have register function', function () {
     const load_bounce_ini_stub = sinon.stub(this.plugin, 'load_bounce_ini')
-    const load_bounce_bad_rcpt_stub = sinon.stub(this.plugin, 'load_bounce_bad_rcpt')
-    const load_bounce_whitelist_stub = sinon.stub(this.plugin, 'load_bounce_whitelist')
+    const load_bounce_bad_rcpt_stub = sinon.stub(
+      this.plugin,
+      'load_bounce_bad_rcpt',
+    )
+    const load_bounce_whitelist_stub = sinon.stub(
+      this.plugin,
+      'load_bounce_whitelist',
+    )
 
     assert.equal('function', typeof this.plugin.register)
 
@@ -67,7 +73,10 @@ describe('load_configs', function () {
   })
 
   it('load_bounce_bad_rcpt', function () {
-    const load_bounce_bad_rcpt_stub = sinon.stub(this.plugin, 'load_bounce_bad_rcpt')
+    const load_bounce_bad_rcpt_stub = sinon.stub(
+      this.plugin,
+      'load_bounce_bad_rcpt',
+    )
 
     this.plugin.load_bounce_bad_rcpt()
 
@@ -76,7 +85,10 @@ describe('load_configs', function () {
   })
 
   it('load_bounce_whitelist', function () {
-    const load_bounce_whitelist_stub = sinon.stub(this.plugin, 'load_bounce_whitelist')
+    const load_bounce_whitelist_stub = sinon.stub(
+      this.plugin,
+      'load_bounce_whitelist',
+    )
 
     this.plugin.load_bounce_whitelist()
 
@@ -194,8 +206,7 @@ describe('validate_config', function () {
 
   it('has default config settings', function () {
     this.plugin.cfg.check.hash_validation = true
-    this.plugin.cfg.validation.secret =
-      'your_generated_secret_here'
+    this.plugin.cfg.validation.secret = 'your_generated_secret_here'
 
     this.plugin.validate_config()
 
@@ -647,7 +658,10 @@ describe('bounce_spf', function () {
     this.plugin.cfg.reject.bounce_spf = true
 
     check_host_stub = sinon.stub(SPF.prototype, 'check_host')
-    find_received_headers_stub = sinon.stub(this.plugin, 'find_received_headers')
+    find_received_headers_stub = sinon.stub(
+      this.plugin,
+      'find_received_headers',
+    )
 
     spf = new SPF()
   })
@@ -1157,7 +1171,10 @@ describe('validate_bounce', function () {
       )
       assert(find_bounce_headers_stub.calledOnce)
       assert(
-        find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body),
+        find_bounce_headers_stub.calledWith(
+          this.connection.transaction,
+          this.connection.transaction.body,
+        ),
       )
       assert.equal(code, undefined)
       assert.equal(msg, undefined)
@@ -1236,7 +1253,10 @@ describe('validate_bounce', function () {
       )
       assert(find_bounce_headers_stub.calledOnce)
       assert(
-        find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body),
+        find_bounce_headers_stub.calledWith(
+          this.connection.transaction,
+          this.connection.transaction.body,
+        ),
       )
       assert.equal(code, undefined)
       assert.equal(msg, undefined)
@@ -1714,7 +1734,10 @@ describe('validate_bounce', function () {
       )
       assert(find_bounce_headers_stub.calledOnce)
       assert(
-        find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body),
+        find_bounce_headers_stub.calledWith(
+          this.connection.transaction,
+          this.connection.transaction.body,
+        ),
       )
       assert.equal(code, DENY)
       assert.equal(msg, 'invalid bounce')
@@ -1747,7 +1770,10 @@ describe('validate_bounce', function () {
       )
       assert(find_bounce_headers_stub.calledOnce)
       assert(
-        find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body),
+        find_bounce_headers_stub.calledWith(
+          this.connection.transaction,
+          this.connection.transaction.body,
+        ),
       )
       assert.equal(code, undefined)
       assert.equal(msg, undefined)
@@ -1851,15 +1877,13 @@ Message-ID: ${message_id}
   it('has no body', function () {
     delete transaction.body
 
-    const headers = this.plugin.find_bounce_headers(transaction.body,)
+    const headers = this.plugin.find_bounce_headers(transaction.body)
 
     assert.equal(JSON.stringify(headers), '{}')
   })
 
   it('has all headers in body', function () {
-    const headers = this.plugin.find_bounce_headers(
-      transaction.body,
-    )
+    const headers = this.plugin.find_bounce_headers(transaction.body)
 
     assert.equal(headers.from, from_header)
     assert.equal(headers.date, date_header)
@@ -1870,7 +1894,7 @@ Message-ID: ${message_id}
   it('has From header in body', function () {
     transaction.body.bodytext = `From: ${from_header}\n`
 
-    const headers = this.plugin.find_bounce_headers(transaction.body,)
+    const headers = this.plugin.find_bounce_headers(transaction.body)
 
     assert.equal(headers.from, from_header)
     assert.equal(headers.date, undefined)
@@ -1881,7 +1905,7 @@ Message-ID: ${message_id}
   it('has Date header in body', function () {
     transaction.body.bodytext = `Date: ${date_header}\n`
 
-    const headers = this.plugin.find_bounce_headers(transaction.body,)
+    const headers = this.plugin.find_bounce_headers(transaction.body)
 
     assert.equal(headers.from, undefined)
     assert.equal(headers.date, date_header)
@@ -1892,7 +1916,7 @@ Message-ID: ${message_id}
   it('has one header in body', function () {
     transaction.body.bodytext = `Date: ${date_header}\n`
 
-    const headers = this.plugin.find_bounce_headers(transaction.body,)
+    const headers = this.plugin.find_bounce_headers(transaction.body)
 
     assert.equal(headers.from, undefined)
     assert.equal(headers.date, date_header)
@@ -1906,7 +1930,7 @@ Message-ID: ${message_id}
       children: [],
     }
 
-    const headers = this.plugin.find_bounce_headers(transaction.body,)
+    const headers = this.plugin.find_bounce_headers(transaction.body)
 
     assert.equal(headers.from, undefined)
     assert.equal(headers.date, undefined)
@@ -1920,7 +1944,7 @@ Message-ID: ${message_id}
       children: [{ bodytext: msg_body }],
     }
 
-    const headers = this.plugin.find_bounce_headers(transaction.body,)
+    const headers = this.plugin.find_bounce_headers(transaction.body)
 
     assert.equal(headers.from, from_header)
     assert.equal(headers.date, date_header)
@@ -1945,7 +1969,7 @@ From: "Dr. Smith - Back & Neck Care Center of San Fransisco"
   <dr.smith@example.com>
 X-Haraka-Bounce-Validation: ${hash}
 `
-    const headers = this.plugin.find_bounce_headers(transaction.body,)
+    const headers = this.plugin.find_bounce_headers(transaction.body)
 
     assert.equal(headers.from, from_header)
     assert.equal(headers.date, date_header)
@@ -2200,6 +2224,6 @@ function create_headers(plugin, options = {}) {
     from: from_header,
     date: date_header,
     message_id: message_id,
-    hash: hash
+    hash: hash,
   }
 }

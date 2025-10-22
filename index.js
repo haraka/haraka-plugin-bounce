@@ -623,16 +623,16 @@ exports.is_date_valid = function (date) {
   // Parse the date that the original email was sent
   const email_date = new Date(date)
   if (isNaN(email_date.getTime())) {
-    return {valid: false, msg: 'invalid date header'}
+    return { valid: false, msg: 'invalid date header' }
   }
 
   // calculate the number of days since the original email was sent
   const age = Math.floor((new Date() - email_date) / (1000 * 60 * 60 * 24))
   if (age > this.cfg.validation.max_hash_age_days) {
-    return {valid: false, msg: 'hash is too old'}
+    return { valid: false, msg: 'hash is too old' }
   }
 
-  return {valid: true}
+  return { valid: true }
 }
 
 // Lazy regexp to get IPs from Received: headers in bounces
