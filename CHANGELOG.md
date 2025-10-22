@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### [2.1.0] - 2025-10-22
 
-- optionally skip if bounce is validated
+- optionally skip if bounce is validated, #13
 
 ### [2.0.1] - 2025-06-02
 
