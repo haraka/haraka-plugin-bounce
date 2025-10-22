@@ -668,7 +668,7 @@ exports.find_bounce_headers = function (body) {
     headers.message_id = extract_header(body.bodytext, 'Message-ID')
     headers.hash = extract_header(body.bodytext, 'X-Haraka-Bounce-Validation')
 
-    // were any headers were found?
+    // were any headers found?
     if (headers.from || headers.date || headers.message_id || headers.hash) {
       return headers
     }
@@ -679,7 +679,7 @@ exports.find_bounce_headers = function (body) {
     for (const child of body.children) {
       const child_hdrs = this.find_bounce_headers(child)
 
-      // were any headers were found?
+      // were any headers found?
       if (
         child_hdrs.from ||
         child_hdrs.date ||
