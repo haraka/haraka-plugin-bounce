@@ -20,7 +20,6 @@ exports.register = function () {
   this.register_hook('data_post', 'create_validation_hash')
   this.register_hook('data_post', 'validate_bounce')
   // must run after validate_bounce
-  this.register_hook('data_post', 'validate_date')
   this.register_hook('data_post', 'bounce_spf')
 }
 
