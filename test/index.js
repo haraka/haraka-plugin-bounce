@@ -48,15 +48,16 @@ describe('register', function () {
 
   it('registers hooks', function () {
     assert.ok(this.plugin.register_hook.called)
-    assert.equal(this.plugin.register_hook.args.length, 8)
-    assert.equal(this.plugin.register_hook.args[0][1], 'reject_all')
-    assert.equal(this.plugin.register_hook.args[1][1], 'bad_rcpt')
-    assert.equal(this.plugin.register_hook.args[2][1], 'single_recipient')
-    assert.equal(this.plugin.register_hook.args[3][1], 'bounce_spf_enable')
-    assert.equal(this.plugin.register_hook.args[4][1], 'empty_return_path')
-    assert.equal(this.plugin.register_hook.args[5][1], 'create_validation_hash')
-    assert.equal(this.plugin.register_hook.args[6][1], 'validate_bounce')
-    assert.equal(this.plugin.register_hook.args[7][1], 'bounce_spf')
+    let hook_count = 0
+    assert.equal(this.plugin.register_hook.args[hook_count++][1], 'reject_all')
+    assert.equal(this.plugin.register_hook.args[hook_count++][1], 'bad_rcpt')
+    assert.equal(this.plugin.register_hook.args[hook_count++][1], 'single_recipient')
+    assert.equal(this.plugin.register_hook.args[hook_count++][1], 'bounce_spf_enable')
+    assert.equal(this.plugin.register_hook.args[hook_count++][1], 'empty_return_path')
+    assert.equal(this.plugin.register_hook.args[hook_count++][1], 'create_validation_hash')
+    assert.equal(this.plugin.register_hook.args[hook_count++][1], 'validate_bounce')
+    assert.equal(this.plugin.register_hook.args[hook_count++][1], 'bounce_spf')
+    assert.equal(this.plugin.register_hook.args.length, hook_count)
   })
 })
 
