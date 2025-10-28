@@ -56,10 +56,8 @@ exports.load_bounce_ini = function () {
 }
 
 exports.validate_config = function () {
-  if (!this.cfg.validation.max_hash_age_days)
-    this.cfg.validation.max_hash_age_days = MAX_HASH_AGE_DAYS
-  if (!this.cfg.validation.hash_algorithm)
-    this.cfg.validation.hash_algorithm = 'sha256'
+  if (!this.cfg.validation.max_hash_age_days) this.cfg.validation.max_hash_age_days = MAX_HASH_AGE_DAYS
+  if (!this.cfg.validation.hash_algorithm) this.cfg.validation.hash_algorithm = 'sha256'
 
   // checks needs to be enabled for rejects to work
   if (this.cfg.reject.single_recipient && !this.cfg.check.single_recipient) {
@@ -84,17 +82,12 @@ exports.validate_config = function () {
   // confirm that hash algorithm is supported
   const algorithms = crypto.getHashes()
   if (!algorithms.includes(this.cfg.validation.hash_algorithm)) {
-    this.logerror(
-      `Bounce validation disabled due to invalid hash algorithm: ${this.cfg.validation.hash_algorithm}`,
-    )
+    this.logerror(`Bounce validation disabled due to invalid hash algorithm: ${this.cfg.validation.hash_algorithm}`)
     this.cfg.check.hash_validation = false
     return
   }
 
-  if (
-    !this.cfg.validation.secret ||
-    this.cfg.validation.secret === 'your_generated_secret_here'
-  ) {
+  if (!this.cfg.validation.secret || this.cfg.validation.secret === 'your_generated_secret_here') {
     this.logerror(`Bounce validation disabled due to missing secret.`)
     this.cfg.check.hash_validation = false
     return
@@ -175,10 +168,7 @@ exports.single_recipient = function (next, connection) {
     return next()
   }
 
-  connection.loginfo(
-    this,
-    `bounce with too many recipients to: ${transaction.rcpt_to.join(',')}`,
-  )
+  connection.loginfo(this, `bounce with too many recipients to: ${transaction.rcpt_to.join(',')}`)
 
   transaction.results.add(this, {
     fail: 'single_recipient',
@@ -334,8 +324,7 @@ exports.bounce_spf = async function (next, connection) {
   if (!connection?.transaction?.body) return next()
   if (!this.cfg.check.bounce_spf) return next()
   if (this.should_skip(connection)) return next()
-  if (connection.transaction.results.has(this, 'pass', 'validate_bounce'))
-    return next()
+  if (connection.transaction.results.has(this, 'pass', 'validate_bounce')) return next()
 
   const { transaction } = connection
 
@@ -358,11 +347,7 @@ exports.bounce_spf = async function (next, connection) {
   for (const ip of ips) {
     let result
     try {
-      result = await spf.check_host(
-        ip,
-        transaction.rcpt_to[0].host,
-        transaction.rcpt_to[0].address(),
-      )
+      result = await spf.check_host(ip, transaction.rcpt_to[0].host, transaction.rcpt_to[0].address())
     } catch (err) {
       connection.logerror(this, err.message)
       transaction.results.add(this, {
@@ -511,19 +496,13 @@ exports.validate_bounce = function (next, connection) {
 
   const { transaction } = connection
 
-  const { from, date, message_id, hash } = this.find_bounce_headers(
-    transaction,
-    transaction.body,
-  )
+  const { from, date, message_id, hash } = this.find_bounce_headers(transaction, transaction.body)
 
   if (hash) {
     const amalgam = `${from}:${date}:${message_id}`
 
     const bounce_hash = crypto
-      .createHmac(
-        this.cfg.validation.hash_algorithm,
-        this.cfg.validation.secret,
-      )
+      .createHmac(this.cfg.validation.hash_algorithm, this.cfg.validation.secret)
       .update(amalgam)
       .digest('hex')
 
@@ -554,10 +533,7 @@ exports.validate_bounce = function (next, connection) {
         }
       }
 
-      msg =
-        bounce_hash.length === hash.length
-          ? 'hash does not match'
-          : 'hash length mismatch'
+      msg = bounce_hash.length === hash.length ? 'hash does not match' : 'hash length mismatch'
     } else {
       msg = 'missing headers'
     }
@@ -635,10 +611,7 @@ exports.is_date_valid = function (date) {
 }
 
 // Lazy regexp to get IPs from Received: headers in bounces
-const received_re = net_utils.get_ipany_re(
-  '^Received:[\\s\\S]*?[\\[\\(](?:IPv6:)?',
-  '[\\]\\)]',
-)
+const received_re = net_utils.get_ipany_re('^Received:[\\s\\S]*?[\\[\\(](?:IPv6:)?', '[\\]\\)]')
 
 // Extracts IP addresses from Received headers in the bounce message body
 exports.find_received_headers = function (body, ips = new Set()) {
@@ -679,12 +652,7 @@ exports.find_bounce_headers = function (body) {
       const child_hdrs = this.find_bounce_headers(child)
 
       // were any headers found?
-      if (
-        child_hdrs.from ||
-        child_hdrs.date ||
-        child_hdrs.message_id ||
-        child_hdrs.hash
-      ) {
+      if (child_hdrs.from || child_hdrs.date || child_hdrs.message_id || child_hdrs.hash) {
         return child_hdrs
       }
     }
@@ -736,7 +704,5 @@ exports.is_whitelisted = function (rcpt, from) {
   if (whitelist_entries.includes(from)) return true
 
   // Check for domain wildcard match
-  return whitelist_entries.some(
-    (addr) => addr.startsWith('*@') && from.endsWith(addr.substring(1)),
-  )
+  return whitelist_entries.some((addr) => addr.startsWith('*@') && from.endsWith(addr.substring(1)))
 }

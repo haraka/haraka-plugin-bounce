@@ -4,6 +4,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [2.1.1] - 2025-10-28
+
+- Remove hook registration for 'validate_date' #16
+- update changes and prettier #14
+- style: expand line width to 120
+
 ### [2.1.0] - 2025-10-22
 
 - optionally skip if bounce is validated, #13
@@ -33,7 +39,6 @@ Added config/bounce_whitelist.json
 
 Changes to test/index.js
 
-- removed requirement for haraka-email-message
 - removed tests for non_local_msgid
 - added tests for create_validation_hash
 - added tests for validate_bounce
@@ -41,8 +46,7 @@ Changes to test/index.js
 - added tests for should_skip
 - added tests for find_received_headers
 - added tests for validate_hash_date
-- replaced most sinon.stub with sinon.spy to better monitor code
-  behavior
+- replaced most sinon.stub with sinon.spy to better monitor code behavior
 - refactored many tests to make better use of sinon spies and assertions
 
 Changes to index.js
@@ -125,3 +129,5 @@ Changes to README.md
 [1.0.5]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v1.0.5
 [2.0.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.0.0
 [2.0.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.0.1
+[2.1.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.1
+[2.1.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.0

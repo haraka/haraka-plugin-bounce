@@ -1,6 +1,6 @@
 {
   "name": "haraka-plugin-bounce",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Provide multiple configurable strategies to detect, validate, and process email bounces",
   "main": "index.js",
   "files": [
@@ -45,6 +45,7 @@
     "sinon": "^21.0.0"
   },
   "prettier": {
+    "printWidth": 120,
     "singleQuote": true,
     "semi": false
   }
