@@ -473,21 +473,21 @@ describe('has_null_sender', function () {
   it('has null sender', function (done) {
     assert.ok(this.plugin.has_null_sender(this.connection.transaction))
 
-    assert.ok(this.connection.transaction.results.has(this.plugin, 'isa', 'yes'))
+    assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
     done()
   })
 
   it('has empty string sender', function (done) {
     this.connection.transaction.mail_from = new Address.Address('')
     assert.ok(this.plugin.has_null_sender(this.connection.transaction))
-    assert.ok(this.connection.transaction.results.has(this.plugin, 'isa', 'yes'))
+    assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
     done()
   })
 
   it('is not a null sender', function (done) {
     this.connection.transaction.mail_from = new Address.Address('user@example.com')
     assert.equal(this.plugin.has_null_sender(this.connection.transaction), false)
-    assert.ok(this.connection.transaction.results.has(this.plugin, 'isa', 'no'))
+    assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', false))
     done()
   })
 })
@@ -584,7 +584,7 @@ describe('bounce_spf', function () {
 
     await this.plugin.bounce_spf((code, msg) => {
       assert.ok(this.should_skip_spy.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'isa', 'no'))
+      assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', false))
       assert.ok(find_received_headers_stub.notCalled)
       assert.equal(code, undefined)
       assert.equal(msg, undefined)
@@ -609,7 +609,7 @@ describe('bounce_spf', function () {
 
     find_received_headers_stub.returns(new Set())
     await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'isa', 'yes'))
+      assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
       assert(find_received_headers_stub.calledOnce)
       assert(find_received_headers_stub.calledWith(this.connection.transaction.body))
       assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
@@ -628,7 +628,7 @@ describe('bounce_spf', function () {
 
     await this.plugin.bounce_spf((code, msg) => {
       assert(find_received_headers_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'isa', 'yes'))
+      assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
       assert(find_received_headers_stub.calledWith(this.connection.transaction.body))
       assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'bounce_spf'))
       assert.ok(check_host_stub.calledOnce)

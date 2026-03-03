@@ -272,10 +272,8 @@ exports.bad_rcpt = function (next, connection, rcpt) {
  */
 exports.has_null_sender = function (transaction) {
   // Bounces have a null sender.
-  // Null sender could also be tested with mail_from.user
-  // Why would isNull() exist if it wasn't the right way to test this?
-  const is_null_sender = transaction.mail_from.isNull() === 1
-  transaction.results.add(this, { isa: is_null_sender ? 'yes' : 'no' })
+  const is_null_sender = !!transaction.mail_from.isNull()
+  transaction.results.add(this, { isa: is_null_sender })
   return is_null_sender
 }
 
@@ -664,10 +662,9 @@ exports.find_bounce_headers = function (body) {
 // Determines whether validation checks should be skipped
 // Skips checks for outbound emails or messages that aren't bounces
 exports.should_skip = function (connection) {
-  const is_relaying = connection.relaying
   const not_a_bounce = !this.has_null_sender(connection.transaction)
 
-  return is_relaying || not_a_bounce
+  return connection.relaying || not_a_bounce
 }
 
 // Extracts a header value from email body text

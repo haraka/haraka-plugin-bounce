@@ -4,6 +4,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [2.1.2] - 2026-03-03
+
+- fix: isa was boolean, revert change from #4 to yes/no
+- deps: bump versions to latest
+
 ### [2.1.1] - 2025-10-28
 
 - Remove hook registration for 'validate_date' #16
@@ -131,3 +136,4 @@ Changes to README.md
 [2.0.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.0.1
 [2.1.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.1
 [2.1.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.0
+[2.1.2]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.2
