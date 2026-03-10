@@ -9,11 +9,11 @@
   ],
   "scripts": {
     "format": "npm run prettier:fix && npm run lint:fix",
-    "lint": "npx eslint@^9 *.js test",
-    "lint:fix": "npx eslint@^9 *.js test --fix",
+    "lint": "npx eslint *.js test",
+    "lint:fix": "npx eslint *.js test --fix",
     "prettier": "npx prettier . --check",
     "prettier:fix": "npx prettier . --write --log-level=warn",
-    "test": "npx mocha@^11",
+    "test": "npx mocha",
     "versions": "npx dependency-version-checker check",
     "versions:fix": "npx dependency-version-checker update"
   },
@@ -38,11 +38,11 @@
     "haraka-plugin-spf": "^1.2.11"
   },
   "devDependencies": {
-    "@haraka/eslint-config": "^2.0.2",
+    "@haraka/eslint-config": "^2.0.3",
     "haraka-test-fixtures": "^1.3.10",
     "mocha": "^11.7.5",
     "prettier": "^3.8.1",
-    "sinon": "^21.0.1"
+    "sinon": "^21.0.2"
   },
   "prettier": {
     "printWidth": 120,

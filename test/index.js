@@ -218,56 +218,66 @@ describe('reject_all', function () {
     this.plugin.cfg.reject.all_bounces = true
   })
 
-  it('will allow bounces', function (done) {
+  it('will allow bounces', async function () {
     this.plugin.cfg.reject.all_bounces = false
-    this.plugin.reject_all((code, msg) => {
-      assert.ok(this.should_skip_spy.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.reject_all((code, msg) => {
+        assert.ok(this.should_skip_spy.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('reject_all - missing transaction', function (done) {
+  it('reject_all - missing transaction', async function () {
     delete this.connection.transaction
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will ignore outbound mail', function (done) {
+  it('will ignore outbound mail', async function () {
     this.connection.relaying = true
 
-    this.plugin.reject_all((code, msg) => {
-      assert.ok(this.should_skip_spy.returned(true))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.reject_all((code, msg) => {
+        assert.ok(this.should_skip_spy.returned(true))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will ignore non-bounce mail', function (done) {
+  it('will ignore non-bounce mail', async function () {
     this.connection.transaction.mail_from = new Address.Address('<test@example.com>')
-    this.plugin.reject_all((code, msg) => {
-      assert.ok(this.should_skip_spy.returned(true))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.reject_all((code, msg) => {
+        assert.ok(this.should_skip_spy.returned(true))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will reject all bounces', function (done) {
-    this.plugin.reject_all((code, msg) => {
-      assert.ok(this.should_skip_spy.returned(false))
-      this.connection.transaction.results.has(this.plugin, 'fail', 'bounces_accepted')
-      this.connection.transaction.results.has(this.plugin, 'msg', 'bounces not accepted here')
-      assert.equal(code, DENY)
-      assert.equal(msg, 'Bounces not accepted here')
-      done()
-    }, this.connection)
+  it('will reject all bounces', async function () {
+    await new Promise((resolve) => {
+      this.plugin.reject_all((code, msg) => {
+        assert.ok(this.should_skip_spy.returned(false))
+        this.connection.transaction.results.has(this.plugin, 'fail', 'bounces_accepted')
+        this.connection.transaction.results.has(this.plugin, 'msg', 'bounces not accepted here')
+        assert.equal(code, DENY)
+        assert.equal(msg, 'Bounces not accepted here')
+        resolve()
+      }, this.connection)
+    })
   })
 })
 
@@ -277,131 +287,153 @@ describe('empty_return_path', function () {
     this.plugin.cfg.reject.empty_return_path = true
   })
 
-  it('empty_return_path - missing transaction', function (done) {
+  it('empty_return_path - missing transaction', async function () {
     delete this.connection.transaction
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.ok(this.should_skip_spy.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.ok(this.should_skip_spy.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('should ignore empty_return_path', function (done) {
+  it('should ignore empty_return_path', async function () {
     this.plugin.cfg.check.empty_return_path = false
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.ok(this.should_skip_spy.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.ok(this.should_skip_spy.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('missing Return-Path header', function (done) {
-    this.plugin.empty_return_path((code, msg) => {
-      assert.ok(this.should_skip_spy.returned(false))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'empty_return_path'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+  it('missing Return-Path header', async function () {
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.ok(this.should_skip_spy.returned(false))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'empty_return_path'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('has empty Return-Path header', function (done) {
+  it('has empty Return-Path header', async function () {
     this.connection.transaction.add_header('Return-Path', '')
-    this.plugin.empty_return_path((code, msg) => {
-      assert.ok(this.should_skip_spy.returned(false))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'empty_return_path'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.ok(this.should_skip_spy.returned(false))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'empty_return_path'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will allow non-empty Return-Path header', function (done) {
+  it('will allow non-empty Return-Path header', async function () {
     this.connection.transaction.add_header('Return-Path', 'Hello World!')
 
     this.plugin.cfg.reject.empty_return_path = false
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.ok(this.should_skip_spy.returned(false))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'empty_return_path'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'bounce with non-empty Return-Path'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.ok(this.should_skip_spy.returned(false))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'empty_return_path'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'bounce with non-empty Return-Path'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will reject non-empty Return-Path header', function (done) {
+  it('will reject non-empty Return-Path header', async function () {
     this.connection.transaction.add_header('Return-Path', 'Hello World!')
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.ok(this.should_skip_spy.returned(false))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'empty_return_path'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'bounce with non-empty Return-Path'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'bounce with non-empty Return-Path (RFC 3834)')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.ok(this.should_skip_spy.returned(false))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'empty_return_path'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'bounce with non-empty Return-Path'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'bounce with non-empty Return-Path (RFC 3834)')
+        resolve()
+      }, this.connection)
+    })
   })
 })
 
 describe('single_recipient', function () {
-  it('single_recipient - missing transaction', function (done) {
+  it('single_recipient - missing transaction', async function () {
     delete this.connection.transaction
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will not check for single recipient', function (done) {
+  it('will not check for single recipient', async function () {
     this.plugin.cfg.check.single_recipient = false
-    this.plugin.single_recipient((code, msg) => {
-      assert.ok(this.should_skip_spy.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.single_recipient((code, msg) => {
+        assert.ok(this.should_skip_spy.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('has single recipient', function (done) {
-    this.plugin.single_recipient((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'single_recipient'))
-      assert.ok(this.should_skip_spy.calledOnce)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+  it('has single recipient', async function () {
+    await new Promise((resolve) => {
+      this.plugin.single_recipient((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'single_recipient'))
+        assert.ok(this.should_skip_spy.calledOnce)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will allow multiple recipients', function (done) {
+  it('will allow multiple recipients', async function () {
     this.plugin.cfg.reject.single_recipient = false
     this.connection.transaction.rcpt_to.push(new Address.Address('test2@example.com'))
-    this.plugin.single_recipient((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'single_recipient'))
-      assert.ok(this.should_skip_spy.calledOnce)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.single_recipient((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'single_recipient'))
+        assert.ok(this.should_skip_spy.calledOnce)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will reject multiple recipients', function (done) {
+  it('will reject multiple recipients', async function () {
     this.connection.transaction.rcpt_to.push(new Address.Address('test2@example.com'))
-    this.plugin.single_recipient((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'single_recipient'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'too many recipients'))
-      assert.ok(this.should_skip_spy.calledOnce)
-      assert.equal(code, DENY)
-      assert.equal(msg, 'this bounce message has too many recipients')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.single_recipient((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'single_recipient'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'too many recipients'))
+        assert.ok(this.should_skip_spy.calledOnce)
+        assert.equal(code, DENY)
+        assert.equal(msg, 'this bounce message has too many recipients')
+        resolve()
+      }, this.connection)
+    })
   })
 })
 
@@ -410,119 +442,130 @@ describe('bad_rcpt', function () {
     this.plugin.cfg.invalid_addrs = ['bad1@example.com', 'bad2@example.com']
   })
 
-  it('will not check for bad recipient', function (done) {
+  it('will not check for bad recipient', async function () {
     this.plugin.cfg.reject.bad_rcpt = false
 
-    this.plugin.reject_all(
-      (code, msg) => {
+    await new Promise((resolve) => {
+      this.plugin.reject_all(
+        (code, msg) => {
+          assert.ok(this.should_skip_spy.notCalled)
+          assert.equal(code, undefined)
+          assert.equal(msg, undefined)
+          resolve()
+        },
+        this.connection,
+        [new Address.Address('<>')],
+      )
+    })
+  })
+
+  it('bad_rcpt - missing transaction', async function () {
+    delete this.connection.transaction
+
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
         assert.ok(this.should_skip_spy.notCalled)
         assert.equal(code, undefined)
         assert.equal(msg, undefined)
-        done()
-      },
-      this.connection,
-      [new Address.Address('<>')],
-    )
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('bad_rcpt - missing transaction', function (done) {
-    delete this.connection.transaction
-
-    this.plugin.empty_return_path((code, msg) => {
-      assert.ok(this.should_skip_spy.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
-  })
-
-  it('will check for valid recipient', function (done) {
+  it('will check for valid recipient', async function () {
     this.plugin.cfg.invalid_addrs = []
     const rcpt = new Address.Address('test@example.com')
-    this.plugin.bad_rcpt(
-      (code, msg) => {
-        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'bad_rcpt'))
-        assert.ok(this.should_skip_spy.calledOnce)
-        assert.equal(code, undefined)
-        assert.equal(msg, undefined)
-        done()
-      },
-      this.connection,
-      rcpt,
-    )
+    await new Promise((resolve) => {
+      this.plugin.bad_rcpt(
+        (code, msg) => {
+          assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'bad_rcpt'))
+          assert.ok(this.should_skip_spy.calledOnce)
+          assert.equal(code, undefined)
+          assert.equal(msg, undefined)
+          resolve()
+        },
+        this.connection,
+        rcpt,
+      )
+    })
   })
 
-  it('will check for invalid recipient', function (done) {
+  it('will check for invalid recipient', async function () {
     const rcpt = new Address.Address('bad1@example.com')
-    this.plugin.bad_rcpt(
-      (code, msg) => {
-        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bad_rcpt'))
-        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'rcpt does not accept bounces'))
-        assert.ok(this.should_skip_spy.calledOnce)
-        assert.equal(code, DENY)
-        assert.equal(msg, `${rcpt.address()} does not accept bounces`)
-        done()
-      },
-      this.connection,
-      rcpt,
-    )
+    await new Promise((resolve) => {
+      this.plugin.bad_rcpt(
+        (code, msg) => {
+          assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bad_rcpt'))
+          assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'rcpt does not accept bounces'))
+          assert.ok(this.should_skip_spy.calledOnce)
+          assert.equal(code, DENY)
+          assert.equal(msg, `${rcpt.address()} does not accept bounces`)
+          resolve()
+        },
+        this.connection,
+        rcpt,
+      )
+    })
   })
 })
 
 describe('has_null_sender', function () {
-  it('has null sender', function (done) {
+  it('has null sender', function () {
     assert.ok(this.plugin.has_null_sender(this.connection.transaction))
 
     assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
-    done()
   })
 
-  it('has empty string sender', function (done) {
+  it('has empty string sender', function () {
     this.connection.transaction.mail_from = new Address.Address('')
     assert.ok(this.plugin.has_null_sender(this.connection.transaction))
     assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
-    done()
   })
 
-  it('is not a null sender', function (done) {
+  it('is not a null sender', function () {
     this.connection.transaction.mail_from = new Address.Address('user@example.com')
     assert.equal(this.plugin.has_null_sender(this.connection.transaction), false)
     assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', false))
-    done()
   })
 })
 
 describe('bounce_spf_enable', function () {
-  it('bounce_spf_enable - missing transaction', function (done) {
+  it('bounce_spf_enable - missing transaction', async function () {
     delete this.connection.transaction
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is outbound mail', function (done) {
+  it('is outbound mail', async function () {
     this.connection.relaying = true
 
-    this.plugin.bounce_spf_enable((code, msg) => {
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      assert.equal(this.connection.transaction.parse_body, false)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf_enable((code, msg) => {
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        assert.equal(this.connection.transaction.parse_body, false)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is inbound mail', function (done) {
+  it('is inbound mail', async function () {
     this.connection.relaying = false
 
-    this.plugin.bounce_spf_enable((code, msg) => {
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      assert.equal(this.connection.transaction.parse_body, true)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf_enable((code, msg) => {
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        assert.equal(this.connection.transaction.parse_body, true)
+        resolve()
+      }, this.connection)
+    })
   })
 })
 
@@ -548,47 +591,58 @@ describe('bounce_spf', function () {
     spf = new SPF()
   })
 
-  it('bounce_spf - missing transaction', function (done) {
+  it('bounce_spf - missing transaction', async function () {
     delete this.connection.transaction
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('skip SPF check', async function () {
     this.plugin.cfg.check.bounce_spf = false
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(this.should_skip_spy.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(this.should_skip_spy.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('will skip outbound mail', async function () {
     this.connection.relaying = true
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(this.should_skip_spy.calledOnce)
-      assert.ok(find_received_headers_stub.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(this.should_skip_spy.calledOnce)
+        assert.ok(find_received_headers_stub.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('will skip when not a null sender', async function () {
     this.connection.transaction.mail_from = new Address.Address('<test@example.com>')
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(this.should_skip_spy.calledOnce)
-      assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', false))
-      assert.ok(find_received_headers_stub.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(this.should_skip_spy.calledOnce)
+        assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', false))
+        assert.ok(find_received_headers_stub.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('will skip when hash validation passed', async function () {
@@ -596,28 +650,34 @@ describe('bounce_spf', function () {
       pass: 'validate_bounce',
     })
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(this.should_skip_spy.calledOnce)
-      assert.ok(find_received_headers_stub.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(this.should_skip_spy.calledOnce)
+        assert.ok(find_received_headers_stub.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('no IPs', async function () {
     this.connection.transaction.body.bodytext = ''
 
     find_received_headers_stub.returns(new Set())
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
-      assert(find_received_headers_stub.calledOnce)
-      assert(find_received_headers_stub.calledWith(this.connection.transaction.body))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'no IP addresses found in message'))
-      assert.ok(check_host_stub.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
+        assert(find_received_headers_stub.calledOnce)
+        assert(find_received_headers_stub.calledWith(this.connection.transaction.body))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'no IP addresses found in message'))
+        assert.ok(check_host_stub.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('has multiple IPs - 1st IP fails, 2nd IP passes', async function () {
@@ -626,92 +686,113 @@ describe('bounce_spf', function () {
     find_received_headers_stub.returns(new Set('1.2.3.4', '5.6.7.8'))
     check_host_stub.returns(spf.SPF_FAIL).returns(spf.SPF_PASS)
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert(find_received_headers_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
-      assert(find_received_headers_stub.calledWith(this.connection.transaction.body))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'bounce_spf'))
-      assert.ok(check_host_stub.calledOnce)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert(find_received_headers_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.get(this.plugin, 'isa', true))
+        assert(find_received_headers_stub.calledWith(this.connection.transaction.body))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'bounce_spf'))
+        assert.ok(check_host_stub.calledOnce)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('SPF_TEMPERROR', async function () {
     find_received_headers_stub.returns(new Set().add('1.2.3.4'))
     check_host_stub.returns(spf.SPF_TEMPERROR)
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(check_host_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'SPF returned TempError'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(check_host_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'SPF returned TempError'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('SPF_PERMERROR', async function () {
     find_received_headers_stub.returns(new Set().add('1.2.3.4'))
     check_host_stub.returns(spf.SPF_PERMERROR)
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(check_host_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'SPF returned PermError'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(check_host_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'SPF returned PermError'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('SPF_NONE', async function () {
     find_received_headers_stub.returns(new Set().add('1.2.3.4'))
     check_host_stub.returns(spf.SPF_NONE)
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(check_host_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'SPF returned None'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(check_host_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'bounce_spf'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'SPF returned None'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('SPF_PASS', async function () {
     find_received_headers_stub.returns(new Set().add('1.2.3.4'))
     check_host_stub.returns(spf.SPF_PASS)
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(check_host_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'bounce_spf'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(check_host_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'bounce_spf'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('SPF_NEUTRAL', async function () {
     find_received_headers_stub.returns(new Set().add('1.2.3.4'))
     check_host_stub.returns(spf.SPF_NEUTRAL)
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(check_host_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_spf'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid bounce (spoofed sender)'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'Invalid bounce (spoofed sender)')
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(check_host_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_spf'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid bounce (spoofed sender)'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'Invalid bounce (spoofed sender)')
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('SPF_SOFTFAIL', async function () {
     find_received_headers_stub.returns(new Set().add('1.2.3.4'))
     check_host_stub.returns(spf.SPF_SOFTFAIL)
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(check_host_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_spf'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid bounce (spoofed sender)'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'Invalid bounce (spoofed sender)')
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(check_host_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_spf'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid bounce (spoofed sender)'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'Invalid bounce (spoofed sender)')
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('skip SPF reject', async function () {
@@ -720,26 +801,32 @@ describe('bounce_spf', function () {
 
     this.plugin.cfg.reject.bounce_spf = false
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(check_host_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_spf'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid bounce (spoofed sender)'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(check_host_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_spf'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid bounce (spoofed sender)'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
   it('SPF_FAIL', async function () {
     find_received_headers_stub.returns(new Set().add('1.2.3.4'))
     check_host_stub.returns(spf.SPF_FAIL)
 
-    await this.plugin.bounce_spf((code, msg) => {
-      assert.ok(check_host_stub.calledOnce)
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_spf'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid bounce (spoofed sender)'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'Invalid bounce (spoofed sender)')
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.bounce_spf((code, msg) => {
+        assert.ok(check_host_stub.calledOnce)
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_spf'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid bounce (spoofed sender)'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'Invalid bounce (spoofed sender)')
+        resolve()
+      }, this.connection)
+    })
   })
 })
 
@@ -759,75 +846,87 @@ describe('create_validation_hash', function () {
     get_decoded_stub = sinon.stub(this.connection.transaction.header, 'get_decoded')
   })
 
-  it('create_validation_hash - missing transaction', function (done) {
+  it('create_validation_hash - missing transaction', async function () {
     delete this.connection.transaction
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('should not create validation hash', function (done) {
+  it('should not create validation hash', async function () {
     this.plugin.cfg.check.hash_validation = false
 
-    this.plugin.create_validation_hash((code, msg) => {
-      sinon.assert.notCalled(get_decoded_stub)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.create_validation_hash((code, msg) => {
+        sinon.assert.notCalled(get_decoded_stub)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('should ignore inbound mail', function (done) {
+  it('should ignore inbound mail', async function () {
     this.connection.relaying = false
 
-    this.plugin.create_validation_hash((code, msg) => {
-      sinon.assert.notCalled(get_decoded_stub)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.create_validation_hash((code, msg) => {
+        sinon.assert.notCalled(get_decoded_stub)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('should skip outbound with null sender', function (done) {
+  it('should skip outbound with null sender', async function () {
     this.connection.transaction.mail_from = new Address.Address('<>')
     this.connection.relaying = true
 
-    this.plugin.create_validation_hash((code, msg) => {
-      sinon.assert.notCalled(get_decoded_stub)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.create_validation_hash((code, msg) => {
+        sinon.assert.notCalled(get_decoded_stub)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('missing Message-ID header', function (done) {
+  it('missing Message-ID header', async function () {
     const date_header = new Date().toISOString()
     const from_header = '<test@example.com>'
 
     this.connection.transaction.add_header('From', from_header)
     this.connection.transaction.add_header('Date', date_header)
 
-    this.plugin.create_validation_hash((code, msg) => {
-      sinon.assert.calledThrice(get_decoded_stub)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.create_validation_hash((code, msg) => {
+        sinon.assert.calledThrice(get_decoded_stub)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('missing From, Date, and Message-ID headers', function (done) {
-    this.plugin.create_validation_hash((code, msg) => {
-      sinon.assert.calledThrice(get_decoded_stub)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+  it('missing From, Date, and Message-ID headers', async function () {
+    await new Promise((resolve) => {
+      this.plugin.create_validation_hash((code, msg) => {
+        sinon.assert.calledThrice(get_decoded_stub)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('should create a validation hash', function (done) {
+  it('should create a validation hash', async function () {
     const date_header = new Date().toISOString()
     const from_header = '<test@example.com>'
     const message_id = '<test@example.COM>'
@@ -836,12 +935,14 @@ describe('create_validation_hash', function () {
     this.connection.transaction.add_header('Date', date_header)
     this.connection.transaction.add_header('Message-ID', message_id)
 
-    this.plugin.create_validation_hash((code, msg) => {
-      sinon.assert.calledThrice(get_decoded_stub)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.create_validation_hash((code, msg) => {
+        sinon.assert.calledThrice(get_decoded_stub)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 })
 
@@ -879,28 +980,32 @@ describe('validate_bounce', function () {
     find_bounce_headers_stub = sinon.stub(this.plugin, 'find_bounce_headers')
   })
 
-  it('validate_bounce - missing transaction', function (done) {
+  it('validate_bounce - missing transaction', async function () {
     delete this.connection.transaction
 
-    this.plugin.empty_return_path((code, msg) => {
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.empty_return_path((code, msg) => {
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('should skip validation check', function (done) {
+  it('should skip validation check', async function () {
     this.plugin.cfg.check.hash_validation = false
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.should_skip_spy.notCalled)
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.should_skip_spy.notCalled)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('has hash size that is too short', function (done) {
+  it('has hash size that is too short', async function () {
     hash = '1234567890'
 
     const headers = create_headers(this.plugin, { hash })
@@ -908,18 +1013,20 @@ describe('validate_bounce', function () {
 
     this.plugin.cfg.reject.hash_validation = false
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash length mismatch'))
-      assert(find_bounce_headers_stub.calledOnce)
-      assert(find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash length mismatch'))
+        assert(find_bounce_headers_stub.calledOnce)
+        assert(find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('has hash size that is too long', function (done) {
+  it('has hash size that is too long', async function () {
     this.plugin.cfg.reject.hash_validation = false
 
     const hash = '1234567890123456789012345678901234567890123456789012345678901234567890'
@@ -927,45 +1034,51 @@ describe('validate_bounce', function () {
     const headers = create_headers(this.plugin, { hash })
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash length mismatch'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash length mismatch'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will reject if wrong hash size', function (done) {
+  it('will reject if wrong hash size', async function () {
     const hash = '1234567890'
 
     const headers = create_headers(this.plugin, { hash })
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash length mismatch'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'invalid bounce')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash length mismatch'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'invalid bounce')
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is a valid inbound bounce', function (done) {
+  it('is a valid inbound bounce', async function () {
     const headers = create_headers(this.plugin)
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'validate_bounce'))
-      assert(find_bounce_headers_stub.calledOnce)
-      assert(find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'pass', 'validate_bounce'))
+        assert(find_bounce_headers_stub.calledOnce)
+        assert(find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('has incorrect hash', function (done) {
+  it('has incorrect hash', async function () {
     this.plugin.cfg.reject.hash_validation = false
 
     hash = crypto
@@ -976,16 +1089,18 @@ describe('validate_bounce', function () {
     const headers = create_headers(this.plugin, { hash })
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash does not match'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash does not match'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will deny when incorrect hash', function (done) {
+  it('will deny when incorrect hash', async function () {
     hash = crypto
       .createHmac(this.plugin.cfg.validation.hash_algorithm, crypto.randomBytes(32).toString('base64'))
       .update(amalgam)
@@ -994,106 +1109,120 @@ describe('validate_bounce', function () {
     const headers = create_headers(this.plugin, { hash })
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash does not match'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'invalid bounce')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash does not match'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'invalid bounce')
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing the From header', function (done) {
+  it('is missing the From header', async function () {
     this.plugin.cfg.reject.hash_validation = false
 
     const headers = create_headers(this.plugin)
     delete headers.from
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing the Date header', function (done) {
+  it('is missing the Date header', async function () {
     this.plugin.cfg.reject.hash_validation = false
 
     const headers = create_headers(this.plugin)
     delete headers.date
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing the Message-ID header', function (done) {
+  it('is missing the Message-ID header', async function () {
     this.plugin.cfg.reject.hash_validation = false
 
     const headers = create_headers(this.plugin)
     delete headers.message_id
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will deny when missing the From header', function (done) {
+  it('will deny when missing the From header', async function () {
     const headers = create_headers(this.plugin)
     delete headers.from
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'invalid bounce')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'invalid bounce')
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will deny when missing the Date header', function (done) {
+  it('will deny when missing the Date header', async function () {
     const headers = create_headers(this.plugin)
     delete headers.date
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'invalid bounce')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'invalid bounce')
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will deny when missing the Message-ID header', function (done) {
+  it('will deny when missing the Message-ID header', async function () {
     const headers = create_headers(this.plugin)
     delete headers.message_id
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'invalid bounce')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing headers'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'invalid bounce')
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing hash header and address parsing fails', function (done) {
+  it('is missing hash header and address parsing fails', async function () {
     const from = 'mail delivery system <mailer-daemon@example.com>'
     const rcpt = new Address.Address('test@example.com')
 
@@ -1105,16 +1234,18 @@ describe('validate_bounce', function () {
     delete headers.hash
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing validation hash'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing validation hash'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing hash header and email address is whitelisted', function (done) {
+  it('is missing hash header and email address is whitelisted', async function () {
     this.plugin.cfg.whitelist = { 'test@example.com': ['no-reply@example.com'] }
 
     const from = '<no-reply@example.com>'
@@ -1127,16 +1258,18 @@ describe('validate_bounce', function () {
     delete headers.hash
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'whitelisted'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'whitelisted'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing hash header and sender domain is whitelisted', function (done) {
+  it('is missing hash header and sender domain is whitelisted', async function () {
     this.plugin.cfg.whitelist = { 'bar@example.com': ['*@example.net'] }
 
     const from = '<info@example.net>'
@@ -1149,16 +1282,18 @@ describe('validate_bounce', function () {
     delete headers.hash
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'whitelisted'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'whitelisted'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing hash header and has invalid from header', function (done) {
+  it('is missing hash header and has invalid from header', async function () {
     const from = '<invalid>'
     this.connection.transaction.add_header('From', from)
 
@@ -1166,17 +1301,19 @@ describe('validate_bounce', function () {
     delete headers.hash
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid from header'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid from header'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
 
-      done()
-    }, this.connection)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing hash header', function (done) {
+  it('is missing hash header', async function () {
     const from = '<info@example.net>'
     this.connection.transaction.add_header('From', from)
     this.plugin.cfg.reject.hash_validation = false
@@ -1185,16 +1322,18 @@ describe('validate_bounce', function () {
     delete headers.hash
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing validation hash'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing validation hash'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will deny when missing hash header', function (done) {
+  it('will deny when missing hash header', async function () {
     const from = '<info@example.net>'
     this.connection.transaction.add_header('From', from)
 
@@ -1202,29 +1341,33 @@ describe('validate_bounce', function () {
     delete headers.hash
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing validation hash'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'invalid bounce')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing validation hash'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'invalid bounce')
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('is missing all headers', function (done) {
+  it('is missing all headers', async function () {
     const headers = {}
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'validate_bounce'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing all headers'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'skip', 'validate_bounce'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'missing all headers'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will Deny when hash is too old', function (done) {
+  it('will Deny when hash is too old', async function () {
     this.plugin.cfg.reject.hash_date = true
     const eightDaysAgo = new Date(new Date() - 1000 * 60 * 60 * 24 * 8)
     date_header = eightDaysAgo.toUTCString()
@@ -1232,18 +1375,20 @@ describe('validate_bounce', function () {
     const headers = create_headers(this.plugin, { date_header })
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_date'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash is too old'))
-      assert(find_bounce_headers_stub.calledOnce)
-      assert(find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'invalid bounce')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_date'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash is too old'))
+        assert(find_bounce_headers_stub.calledOnce)
+        assert(find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'invalid bounce')
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('hash is too old', function (done) {
+  it('hash is too old', async function () {
     this.plugin.cfg.reject.hash_date = false
     const eightDaysAgo = new Date(new Date() - 1000 * 60 * 60 * 24 * 8)
     date_header = eightDaysAgo.toUTCString()
@@ -1251,46 +1396,52 @@ describe('validate_bounce', function () {
     const headers = create_headers(this.plugin, { date_header })
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_date'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash is too old'))
-      assert(find_bounce_headers_stub.calledOnce)
-      assert(find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_date'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'hash is too old'))
+        assert(find_bounce_headers_stub.calledOnce)
+        assert(find_bounce_headers_stub.calledWith(this.connection.transaction, this.connection.transaction.body))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('has invalid date header', function (done) {
+  it('has invalid date header', async function () {
     this.plugin.cfg.reject.hash_date = false
     date_header = 'invalid date'
 
     const headers = create_headers(this.plugin, { date_header })
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_date'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid date header'))
-      assert.equal(code, undefined)
-      assert.equal(msg, undefined)
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_date'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid date header'))
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
+        resolve()
+      }, this.connection)
+    })
   })
 
-  it('will DENY when date header is invalid', function (done) {
+  it('will DENY when date header is invalid', async function () {
     date_header = 'invalid date'
 
     const headers = create_headers(this.plugin, { date_header })
     find_bounce_headers_stub.returns(headers)
 
-    this.plugin.validate_bounce((code, msg) => {
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_date'))
-      assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid date header'))
-      assert.equal(code, DENY)
-      assert.equal(msg, 'invalid bounce')
-      done()
-    }, this.connection)
+    await new Promise((resolve) => {
+      this.plugin.validate_bounce((code, msg) => {
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'fail', 'bounce_date'))
+        assert.ok(this.connection.transaction.results.has(this.plugin, 'msg', 'invalid date header'))
+        assert.equal(code, DENY)
+        assert.equal(msg, 'invalid bounce')
+        resolve()
+      }, this.connection)
+    })
   })
 })
 
@@ -1574,30 +1725,27 @@ describe('is_date_valid', function () {
     this.plugin.cfg.validation.max_hash_age_days = 6
   })
 
-  it('has recent date', function (done) {
+  it('has recent date', function () {
     const oneDayAgo = new Date(new Date() - 1000 * 60 * 60 * 24 * 1)
     const date_header = oneDayAgo.toUTCString()
 
     const result = this.plugin.is_date_valid(date_header)
     assert(result.valid)
-    done()
   })
 
-  it('has expired date', function (done) {
+  it('has expired date', function () {
     const SevenDaysAgo = new Date(new Date() - 1000 * 60 * 60 * 24 * 7)
     const date_header = SevenDaysAgo.toUTCString()
     const result = this.plugin.is_date_valid(date_header)
     assert.equal(result.valid, false)
     assert.equal(result.msg, 'hash is too old')
-    done()
   })
 
-  it('has invalid date', function (done) {
+  it('has invalid date', function () {
     const not_a_date = 'hello world'
     const result = this.plugin.is_date_valid(not_a_date)
     assert.equal(result.valid, false)
     assert.equal(result.msg, 'invalid date header')
-    done()
   })
 })
 
