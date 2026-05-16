@@ -46,12 +46,7 @@ describe('register', () => {
       mail: ['reject_all'],
       rcpt_ok: ['bad_rcpt'],
       data: ['single_recipient', 'bounce_spf_enable'],
-      data_post: [
-        'empty_return_path',
-        'create_validation_hash',
-        'validate_bounce',
-        'bounce_spf',
-      ],
+      data_post: ['empty_return_path', 'create_validation_hash', 'validate_bounce', 'bounce_spf'],
     })
   })
 })

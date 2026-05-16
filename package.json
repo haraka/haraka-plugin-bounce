@@ -34,14 +34,14 @@
   },
   "homepage": "https://github.com/haraka/haraka-plugin-bounce#readme",
   "dependencies": {
-    "@haraka/email-address": "^3.1.2",
-    "haraka-net-utils": "^1.7.2",
+    "@haraka/email-address": "^3.1.4",
+    "haraka-net-utils": "^1.8.2",
     "haraka-plugin-spf": "^1.2.11"
   },
   "devDependencies": {
     "@haraka/eslint-config": "^2.0.4",
-    "haraka-test-fixtures": "^1.4.0",
-    "sinon": "^21.0.3"
+    "haraka-test-fixtures": "^1.5.1",
+    "sinon": "^22.0.0"
   },
   "prettier": {
     "printWidth": 120,
