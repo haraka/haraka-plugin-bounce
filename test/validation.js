@@ -5,7 +5,7 @@ const crypto = require('node:crypto')
 const { describe, it, beforeEach, afterEach } = require('node:test')
 const sinon = require('sinon')
 
-const { Address } = require('address-rfc2821')
+const { Address } = require('@haraka/email-address')
 const fixtures = require('haraka-test-fixtures')
 
 let plugin, connection, should_skip_spy
