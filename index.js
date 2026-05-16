@@ -543,7 +543,7 @@ exports.validate_bounce = function (next, connection) {
       parsed_from = addrparser.parseHeader(from_header)[0].address
     } catch (err) {
       // ignore error
-      connection.loginfo(this, `@haraka/email-address parsing error: ${err.message}`)
+      connection.loginfo(this, `address-rfc2822 parsing error: ${err.message}`)
 
       transaction.results.add(this, {
         skip: 'validate_bounce',
