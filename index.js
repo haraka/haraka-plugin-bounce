@@ -2,7 +2,7 @@
 const { SPF } = require('haraka-plugin-spf')
 const net_utils = require('haraka-net-utils')
 const crypto = require('node:crypto')
-const addrparser = require('@haraka/email-address')
+const addrparser = require('address-rfc2822')
 
 const MAX_HASH_AGE_DAYS = 6
 
@@ -235,13 +235,13 @@ exports.bad_rcpt = function (next, connection, rcpt) {
 
   const { transaction } = connection
 
-  if (this.cfg.invalid_addrs.includes(rcpt.address.toLowerCase())) {
+  if (this.cfg.invalid_addrs.includes(rcpt.address().toLowerCase())) {
     transaction.results.add(this, {
       fail: 'bad_rcpt',
       msg: 'rcpt does not accept bounces',
       emit: true,
     })
-    return next(DENY, `${rcpt.address} does not accept bounces`)
+    return next(DENY, `${rcpt.address()} does not accept bounces`)
   }
 
   transaction.results.add(this, { pass: 'bad_rcpt' })
@@ -553,7 +553,7 @@ exports.validate_bounce = function (next, connection) {
       return next()
     }
 
-    const rcpt = transaction.rcpt_to[0].address.toLowerCase()
+    const rcpt = transaction.rcpt_to[0].address().toLowerCase()
 
     if (this.is_whitelisted(rcpt, parsed_from)) {
       transaction.results.add(this, {
