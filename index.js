@@ -2,7 +2,7 @@
 const { SPF } = require('haraka-plugin-spf')
 const net_utils = require('haraka-net-utils')
 const crypto = require('node:crypto')
-const addrparser = require('address-rfc2822')
+const addrparser = require('@haraka/email-address')
 
 const MAX_HASH_AGE_DAYS = 6
 
@@ -56,46 +56,36 @@ exports.load_bounce_ini = function () {
 }
 
 exports.validate_config = function () {
-  if (!this.cfg.validation.max_hash_age_days) this.cfg.validation.max_hash_age_days = MAX_HASH_AGE_DAYS
-  if (!this.cfg.validation.hash_algorithm) this.cfg.validation.hash_algorithm = 'sha256'
+  const { check, reject, validation } = this.cfg
 
-  // checks needs to be enabled for rejects to work
-  if (this.cfg.reject.single_recipient && !this.cfg.check.single_recipient) {
-    this.cfg.check.single_recipient = true
-  }
-  if (this.cfg.reject.empty_return_path && !this.cfg.check.empty_return_path) {
-    this.cfg.check.empty_return_path = true
-  }
-  if (this.cfg.reject.bounce_spf && !this.cfg.check.bounce_spf) {
-    this.cfg.check.bounce_spf = true
-  }
-  if (this.cfg.reject.hash_validation && !this.cfg.check.hash_validation) {
-    this.cfg.check.hash_validation = true
+  if (!validation.max_hash_age_days) validation.max_hash_age_days = MAX_HASH_AGE_DAYS
+  if (!validation.hash_algorithm) validation.hash_algorithm = 'sha256'
+
+  // checks need to be enabled for rejects to work
+  for (const key of ['single_recipient', 'empty_return_path', 'bounce_spf', 'hash_validation']) {
+    if (reject[key] && !check[key]) check[key] = true
   }
 
-  if (!this.cfg.check.hash_validation) return
-
-  if (this.cfg.reject.hash_date && !this.cfg.check.hash_date) {
-    this.cfg.check.hash_date = true
-  }
+  if (!check.hash_validation) return
+  if (reject.hash_date && !check.hash_date) check.hash_date = true
 
   // confirm that hash algorithm is supported
   const algorithms = crypto.getHashes()
-  if (!algorithms.includes(this.cfg.validation.hash_algorithm)) {
-    this.logerror(`Bounce validation disabled due to invalid hash algorithm: ${this.cfg.validation.hash_algorithm}`)
-    this.cfg.check.hash_validation = false
+  if (!algorithms.includes(validation.hash_algorithm)) {
+    this.logerror(`Bounce validation disabled due to invalid hash algorithm: ${validation.hash_algorithm}`)
+    check.hash_validation = false
     return
   }
 
-  if (!this.cfg.validation.secret || this.cfg.validation.secret === 'your_generated_secret_here') {
+  if (!validation.secret || validation.secret === 'your_generated_secret_here') {
     this.logerror(`Bounce validation disabled due to missing secret.`)
-    this.cfg.check.hash_validation = false
+    check.hash_validation = false
     return
   }
 
-  if (this.cfg.validation.secret.length < 32) {
+  if (validation.secret.length < 32) {
     this.logerror('Bounce validation disabled due to secret that is too short.')
-    this.cfg.check.hash_validation = false
+    check.hash_validation = false
     return
   }
 }
@@ -245,13 +235,13 @@ exports.bad_rcpt = function (next, connection, rcpt) {
 
   const { transaction } = connection
 
-  if (this.cfg.invalid_addrs.includes(rcpt.address().toLowerCase())) {
+  if (this.cfg.invalid_addrs.includes(rcpt.address.toLowerCase())) {
     transaction.results.add(this, {
       fail: 'bad_rcpt',
       msg: 'rcpt does not accept bounces',
       emit: true,
     })
-    return next(DENY, `${rcpt.address()} does not accept bounces`)
+    return next(DENY, `${rcpt.address} does not accept bounces`)
   }
 
   transaction.results.add(this, { pass: 'bad_rcpt' })
@@ -345,7 +335,7 @@ exports.bounce_spf = async function (next, connection) {
   for (const ip of ips) {
     let result
     try {
-      result = await spf.check_host(ip, transaction.rcpt_to[0].host, transaction.rcpt_to[0].address())
+      result = await spf.check_host(ip, transaction.rcpt_to[0].host, transaction.rcpt_to[0].address)
     } catch (err) {
       connection.logerror(this, err.message)
       transaction.results.add(this, {
@@ -550,10 +540,10 @@ exports.validate_bounce = function (next, connection) {
     const from_header = transaction.header.get_decoded('From').toLowerCase()
     let parsed_from
     try {
-      parsed_from = addrparser.parse(from_header)[0].address
+      parsed_from = addrparser.parseHeader(from_header)[0].address
     } catch (err) {
       // ignore error
-      connection.loginfo(this, `address-rfc2822 parsing error: ${err.message}`)
+      connection.loginfo(this, `@haraka/email-address parsing error: ${err.message}`)
 
       transaction.results.add(this, {
         skip: 'validate_bounce',
@@ -563,7 +553,7 @@ exports.validate_bounce = function (next, connection) {
       return next()
     }
 
-    const rcpt = transaction.rcpt_to[0].address().toLowerCase()
+    const rcpt = transaction.rcpt_to[0].address.toLowerCase()
 
     if (this.is_whitelisted(rcpt, parsed_from)) {
       transaction.results.add(this, {

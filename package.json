@@ -1,6 +1,6 @@
 {
   "name": "haraka-plugin-bounce",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Provide multiple configurable strategies to detect, validate, and process email bounces",
   "main": "index.js",
   "files": [
@@ -13,9 +13,10 @@
     "lint:fix": "npx eslint *.js test --fix",
     "prettier": "npx prettier . --check",
     "prettier:fix": "npx prettier . --write --log-level=warn",
-    "test": "npx mocha",
-    "versions": "npx dependency-version-checker check",
-    "versions:fix": "npx dependency-version-checker update"
+    "test": "node --test test/*.js",
+    "versions": "npx npm-dep-mgr check",
+    "versions:fix": "npx npm-dep-mgr update",
+    "test:coverage": "npx c8 --reporter=text --reporter=text-summary npm test"
   },
   "repository": {
     "type": "git",
@@ -33,14 +34,14 @@
   },
   "homepage": "https://github.com/haraka/haraka-plugin-bounce#readme",
   "dependencies": {
-    "address-rfc2822": "^2.2.3",
+    "@haraka/email-address": "^3.1.2",
     "haraka-net-utils": "^1.7.2",
     "haraka-plugin-spf": "^1.2.11"
   },
   "devDependencies": {
-    "@haraka/eslint-config": "^2.0.3",
-    "haraka-test-fixtures": "^1.3.10",
-    "sinon": "^21.0.2"
+    "@haraka/eslint-config": "^2.0.4",
+    "haraka-test-fixtures": "^1.4.0",
+    "sinon": "^21.0.3"
   },
   "prettier": {
     "printWidth": 120,
