@@ -259,8 +259,8 @@ describe('reject_all', () => {
     await new Promise((resolve) => {
       plugin.reject_all((code, msg) => {
         assert.ok(should_skip_spy.returned(true))
-        assert.strictEqual(code, undefined)
-        assert.strictEqual(msg, undefined)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
         resolve()
       }, connection)
     })
@@ -273,8 +273,8 @@ describe('reject_all', () => {
         assert.ok(should_skip_spy.returned(false))
         connection.transaction.results.has(plugin, 'fail', 'bounces_accepted')
         connection.transaction.results.has(plugin, 'msg', 'bounces not accepted here')
-        assert.strictEqual(code, DENY)
-        assert.strictEqual(msg, 'Bounces not accepted here')
+        assert.equal(code, DENY)
+        assert.equal(msg, 'Bounces not accepted here')
         resolve()
       }, connection)
     })
@@ -618,8 +618,8 @@ describe('bounce_spf', () => {
       plugin.bounce_spf((code, msg) => {
         assert.ok(should_skip_spy.calledOnce)
         assert.ok(find_received_headers_stub.notCalled)
-        assert.strictEqual(code, undefined)
-        assert.strictEqual(msg, undefined)
+        assert.equal(code, undefined)
+        assert.equal(msg, undefined)
         resolve()
       }, connection)
     })
@@ -1569,7 +1569,7 @@ describe('should_skip', () => {
 
     const result = plugin.should_skip(connection)
 
-    assert.strictEqual(result, true)
+    assert.equal(result, true)
   })
 
   it('is relaying and is a bounce', () => {
@@ -1578,7 +1578,7 @@ describe('should_skip', () => {
 
     const result = plugin.should_skip(connection)
 
-    assert.strictEqual(result, true)
+    assert.equal(result, true)
   })
 
   it('is not relaying and is not a bounce', () => {
@@ -1588,7 +1588,7 @@ describe('should_skip', () => {
 
     const result = plugin.should_skip(connection)
 
-    assert.strictEqual(result, true)
+    assert.equal(result, true)
   })
 
   it('is not relaying and is a bounce', () => {
@@ -1597,7 +1597,7 @@ describe('should_skip', () => {
 
     const result = plugin.should_skip(connection)
 
-    assert.strictEqual(result, false)
+    assert.equal(result, false)
   })
 })
 
@@ -1753,16 +1753,16 @@ describe('check_null_sender', () => {
     connection.relaying = true
     plugin.check_null_sender((code, msg) => {
       assert.ok(connection.transaction.results.has(plugin, 'isa', 'yes'))
-      assert.strictEqual(code, undefined)
-      assert.strictEqual(msg, undefined)
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
     }, connection)
   })
 
   it('has null sender', () => {
     plugin.check_null_sender((code, msg) => {
       assert.ok(connection.transaction.results.has(plugin, 'isa', 'yes'))
-      assert.strictEqual(code, undefined)
-      assert.strictEqual(msg, undefined)
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
     }, connection)
   })
 
@@ -1771,8 +1771,8 @@ describe('check_null_sender', () => {
 
     plugin.check_null_sender((code, msg) => {
       assert.ok(connection.transaction.results.has(plugin, 'isa', 'yes'))
-      assert.strictEqual(code, undefined)
-      assert.strictEqual(msg, undefined)
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
     }, connection)
   })
 
@@ -1781,8 +1781,8 @@ describe('check_null_sender', () => {
 
     plugin.check_null_sender((code, msg) => {
       assert.ok(connection.transaction.results.has(plugin, 'isa', 'no'))
-      assert.strictEqual(code, undefined)
-      assert.strictEqual(msg, undefined)
+      assert.equal(code, undefined)
+      assert.equal(msg, undefined)
     }, connection)
   })
 })
