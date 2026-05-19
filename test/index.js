@@ -43,7 +43,7 @@ describe('register', () => {
 
   it.skip('registers hooks', () => {
     assert.deepEqual(plugin.hooks, {
-      mail: ['reject_all'],
+      mail: ['reject_all', 'check_null_sender'],
       rcpt_ok: ['bad_rcpt'],
       data: ['single_recipient', 'bounce_spf_enable'],
       data_post: ['empty_return_path', 'create_validation_hash', 'validate_bounce', 'bounce_spf'],
@@ -254,12 +254,13 @@ describe('reject_all', () => {
   })
 
   it('will ignore non-bounce mail', async () => {
+    connection.transaction.results.add(plugin, { isa: 'no' })
     connection.transaction.mail_from = new Address.Address('<test@example.com>')
     await new Promise((resolve) => {
       plugin.reject_all((code, msg) => {
         assert.ok(should_skip_spy.returned(true))
-        assert.equal(code, undefined)
-        assert.equal(msg, undefined)
+        assert.strictEqual(code, undefined)
+        assert.strictEqual(msg, undefined)
         resolve()
       }, connection)
     })
@@ -267,12 +268,13 @@ describe('reject_all', () => {
 
   it('will reject all bounces', async () => {
     await new Promise((resolve) => {
+      connection.transaction.results.add(plugin, { isa: 'yes' })
       plugin.reject_all((code, msg) => {
         assert.ok(should_skip_spy.returned(false))
         connection.transaction.results.has(plugin, 'fail', 'bounces_accepted')
         connection.transaction.results.has(plugin, 'msg', 'bounces not accepted here')
-        assert.equal(code, DENY)
-        assert.equal(msg, 'Bounces not accepted here')
+        assert.strictEqual(code, DENY)
+        assert.strictEqual(msg, 'Bounces not accepted here')
         resolve()
       }, connection)
     })
@@ -507,26 +509,6 @@ describe('bad_rcpt', () => {
   })
 })
 
-describe('has_null_sender', () => {
-  it('has null sender', () => {
-    assert.ok(plugin.has_null_sender(connection.transaction))
-
-    assert.ok(connection.transaction.results.get(plugin, 'isa', true))
-  })
-
-  it('has empty string sender', () => {
-    connection.transaction.mail_from = new Address.Address('')
-    assert.ok(plugin.has_null_sender(connection.transaction))
-    assert.ok(connection.transaction.results.get(plugin, 'isa', true))
-  })
-
-  it('is not a null sender', () => {
-    connection.transaction.mail_from = new Address.Address('user@example.com')
-    assert.equal(plugin.has_null_sender(connection.transaction), false)
-    assert.ok(connection.transaction.results.get(plugin, 'isa', false))
-  })
-})
-
 describe('bounce_spf_enable', () => {
   it('bounce_spf_enable - missing transaction', async () => {
     delete connection.transaction
@@ -629,15 +611,15 @@ describe('bounce_spf', () => {
   })
 
   it('will skip when not a null sender', async () => {
+    connection.transaction.results.add(plugin, { isa: 'no' })
     connection.transaction.mail_from = new Address.Address('<test@example.com>')
 
     await new Promise((resolve) => {
       plugin.bounce_spf((code, msg) => {
         assert.ok(should_skip_spy.calledOnce)
-        assert.ok(connection.transaction.results.get(plugin, 'isa', false))
         assert.ok(find_received_headers_stub.notCalled)
-        assert.equal(code, undefined)
-        assert.equal(msg, undefined)
+        assert.strictEqual(code, undefined)
+        assert.strictEqual(msg, undefined)
         resolve()
       }, connection)
     })
@@ -885,6 +867,7 @@ describe('create_validation_hash', () => {
   it('should skip outbound with null sender', async () => {
     connection.transaction.mail_from = new Address.Address('<>')
     connection.relaying = true
+    connection.transaction.results.add(plugin, { isa: 'yes' })
 
     await new Promise((resolve) => {
       plugin.create_validation_hash((code, msg) => {
@@ -1579,52 +1562,42 @@ X-Haraka-Bounce-Validation: ${hash}
 })
 
 describe('should_skip', () => {
-  let has_null_sender_spy
-
-  beforeEach(() => {
-    has_null_sender_spy = sinon.spy(plugin, 'has_null_sender')
-  })
-
   it('is relaying and is not a bounce', () => {
     connection.transaction.mail_from = new Address.Address('<test@example.com>')
     connection.relaying = true
+    connection.transaction.results.add(plugin, { isa: 'no' })
 
     const result = plugin.should_skip(connection)
 
-    assert.equal(result, true)
-    assert.ok(has_null_sender_spy.calledOnce)
-    assert.ok(has_null_sender_spy.returned(false))
+    assert.strictEqual(result, true)
   })
 
   it('is relaying and is a bounce', () => {
     connection.relaying = true
+    connection.transaction.results.add(plugin, { isa: 'yes' })
 
     const result = plugin.should_skip(connection)
 
-    assert.equal(result, true)
-    assert.ok(has_null_sender_spy.calledOnce)
-    assert.ok(has_null_sender_spy.returned(true))
+    assert.strictEqual(result, true)
   })
 
   it('is not relaying and is not a bounce', () => {
     connection.transaction.mail_from = new Address.Address('<test@example.com>')
     connection.relaying = false
+    connection.transaction.results.add(plugin, { isa: 'no' })
 
     const result = plugin.should_skip(connection)
 
-    assert.equal(result, true)
-    assert.ok(has_null_sender_spy.calledOnce)
-    assert.ok(has_null_sender_spy.returned(false))
+    assert.strictEqual(result, true)
   })
 
   it('is not relaying and is a bounce', () => {
     connection.relaying = false
+    connection.transaction.results.add(plugin, { isa: 'yes' })
 
     const result = plugin.should_skip(connection)
 
-    assert.equal(result, false)
-    assert.ok(has_null_sender_spy.calledOnce)
-    assert.ok(has_null_sender_spy.returned(true))
+    assert.strictEqual(result, false)
   })
 })
 
@@ -1772,6 +1745,45 @@ describe('is_whitelisted', () => {
     const whitelisted = plugin.is_whitelisted('test@example.com', 'support@example.com')
 
     assert.ok(whitelisted)
+  })
+})
+
+describe('check_null_sender', () => {
+  it('is relaying', () => {
+    connection.relaying = true
+    plugin.check_null_sender((code, msg) => {
+      assert.ok(connection.transaction.results.has(plugin, 'isa', 'yes'))
+      assert.strictEqual(code, undefined)
+      assert.strictEqual(msg, undefined)
+    }, connection)
+  })
+
+  it('has null sender', () => {
+    plugin.check_null_sender((code, msg) => {
+      assert.ok(connection.transaction.results.has(plugin, 'isa', 'yes'))
+      assert.strictEqual(code, undefined)
+      assert.strictEqual(msg, undefined)
+    }, connection)
+  })
+
+  it('has empty string sender', () => {
+    connection.transaction.mail_from = new Address.Address('')
+
+    plugin.check_null_sender((code, msg) => {
+      assert.ok(connection.transaction.results.has(plugin, 'isa', 'yes'))
+      assert.strictEqual(code, undefined)
+      assert.strictEqual(msg, undefined)
+    }, connection)
+  })
+
+  it('is not a null sender', () => {
+    connection.transaction.mail_from = new Address.Address('user@example.com')
+
+    plugin.check_null_sender((code, msg) => {
+      assert.ok(connection.transaction.results.has(plugin, 'isa', 'no'))
+      assert.strictEqual(code, undefined)
+      assert.strictEqual(msg, undefined)
+    }, connection)
   })
 })
 
