@@ -11,6 +11,7 @@ exports.register = function () {
   this.load_bounce_bad_rcpt()
   this.load_bounce_whitelist()
 
+  this.register_hook('mail', 'check_null_sender', -5)
   this.register_hook('mail', 'reject_all')
   this.register_hook('rcpt_ok', 'bad_rcpt')
   this.register_hook('data', 'single_recipient')
@@ -102,6 +103,29 @@ exports.load_bounce_whitelist = function () {
   this.cfg.whitelist = this.config.get('bounce_whitelist.json', () => {
     this.load_bounce_whitelist()
   })
+}
+
+/*
+ * Checks message for null sender (bounces have a null sender)
+ *
+ * Special cases:
+ * - Microsoft Exchange will send mail to distribution groups using a
+ *   null sender if the "report_to_originator_enabled" property is false.
+ * - Some email providers (e.g., gmx.net) send DMARC reports with a null sender
+ * - Some auto-responders send replies with a null sender
+ *
+ * Note: This only applies to inbound messages with a null sender.
+ */
+exports.check_null_sender = function (next, connection) {
+  if (!connection?.transaction?.mail_from) return next()
+
+  const is_null_sender = connection.transaction.mail_from.isNull() ? 'yes' : 'no'
+  connection.transaction.results.add(this, {
+    isa: is_null_sender,
+    emit: true,
+  })
+
+  next()
 }
 
 /*
@@ -247,24 +271,6 @@ exports.bad_rcpt = function (next, connection, rcpt) {
   transaction.results.add(this, { pass: 'bad_rcpt' })
 
   next()
-}
-
-/*
- * Checks message for null sender (bounces have a null sender)
- *
- * Special cases:
- * - Microsoft Exchange will send mail to distribution groups using a
- *   null sender if the "report_to_originator_enabled" property is false.
- * - Some email providers (e.g., gmx.net) send DMARC reports with a null sender
- * - Some auto-responders send replies with a null sender
- *
- * Note: This only applies to inbound messages with a null sender.
- */
-exports.has_null_sender = function (transaction) {
-  // Bounces have a null sender.
-  const is_null_sender = !!transaction.mail_from.isNull()
-  transaction.results.add(this, { isa: is_null_sender })
-  return is_null_sender
 }
 
 /*
@@ -414,7 +420,7 @@ exports.create_validation_hash = function (next, connection) {
 
   const { transaction } = connection
 
-  if (!connection.relaying || this.has_null_sender(transaction)) {
+  if (!connection.relaying || transaction.results.has(this, 'isa', 'yes')) {
     return next()
   }
 
@@ -652,7 +658,7 @@ exports.find_bounce_headers = function (body) {
 // Determines whether validation checks should be skipped
 // Skips checks for outbound emails or messages that aren't bounces
 exports.should_skip = function (connection) {
-  const not_a_bounce = !this.has_null_sender(connection.transaction)
+  const not_a_bounce = connection.transaction.results.has(this, 'isa', 'no')
 
   return connection.relaying || not_a_bounce
 }

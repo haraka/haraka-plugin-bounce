@@ -4,6 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+- moved null sender check to hook_mail
 - test: runner is now node:test
 - test: convert done callbacks to async/await #20
 
