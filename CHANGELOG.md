@@ -4,6 +4,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+- doc(README): fixed the feature-toggle sentence
+- doc(README): removed duplicate hash_date=false
+- fix: prevent stateful regex leaking across recursive MIME-part scan
 - moved null sender check to hook_mail
 - test: runner is now node:test
 - test: convert done callbacks to async/await #20
