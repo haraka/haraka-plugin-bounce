@@ -15,7 +15,7 @@ Key capabilities include:
 
 ## Configuration
 
-Each feature can be enabled/disabled with a true/false toggle in the `[validation]`, `[check]`, or `[reject]`sections of `config/bounce.ini`:
+Each feature can be enabled/disabled with a true/false toggle in the `[check]`, `[reject]`, or `[skip]` sections of `config/bounce.ini`:
 
 Some features can have rejections disabled in the `[reject]` section.
 
@@ -42,7 +42,9 @@ hash_date=false
 bad_rcpt=true
 all_bounces=false
 hash_validation=false
-hash_date=false
+
+[skip]
+remaining_plugins=false
 ```
 
 ## Features

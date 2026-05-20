@@ -612,6 +612,7 @@ exports.find_received_headers = function (body, ips = new Set()) {
   if (!body) return ips
 
   let match
+  received_re.lastIndex = 0
   while ((match = received_re.exec(body.bodytext))) {
     const ip = match[1]
     if (net_utils.is_private_ip(ip)) continue
