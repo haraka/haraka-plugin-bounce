@@ -4,10 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [2.2.0] - 2026-05-15
+
+- fix: prevent stateful regex leaking across recursive MIME-part scan
+- dep(address-rfc2822): replaced by @haraka/email-address
 - doc(README): fixed the feature-toggle sentence
 - doc(README): removed duplicate hash_date=false
-- fix: prevent stateful regex leaking across recursive MIME-part scan
-- moved null sender check to hook_mail
+- changed: moved null sender check to hook_mail
 - test: runner is now node:test
 - test: convert done callbacks to async/await #20
 
@@ -144,3 +147,4 @@ Changes to README.md
 [2.1.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.1
 [2.1.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.0
 [2.1.2]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.2
+[2.2.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.2.0

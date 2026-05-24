@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 const { describe, it, beforeEach, afterEach } = require('node:test')
 const sinon = require('sinon')
 
-const { Address } = require('address-rfc2821')
+const { Address } = require('@haraka/email-address')
 const fixtures = require('haraka-test-fixtures')
 
 let plugin, connection, should_skip_spy
@@ -214,6 +214,6 @@ describe('bad_rcpt', () => {
     assert.ok(connection.transaction.results.has(plugin, 'msg', 'rcpt does not accept bounces'))
     assert.ok(should_skip_spy.calledOnce)
     assert.equal(code, DENY)
-    assert.equal(msg, `${rcpt.address()} does not accept bounces`)
+    assert.equal(msg, `${rcpt.address} does not accept bounces`)
   })
 })
