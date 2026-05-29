@@ -1,7 +1,6 @@
-[![CI Test Status][ci-img]][ci-url]
-[![Code Climate][clim-img]][clim-url]
-
 # haraka-plugin-bounce
+
+[![Test][ci-img]][ci-url] [![Cover][cov-img]][cov-url] [![Qlty][qlty-img]][qlty-url]
 
 This plugin provides multiple configurable strategies to detect, validate, and process email bounces, helping protect your mail server from backscatter, forged bounces, and bounce-based attacks.
 
@@ -130,7 +129,7 @@ $EDITOR config/bounce.ini
 
 [ci-img]: https://github.com/haraka/haraka-plugin-bounce/actions/workflows/ci.yml/badge.svg
 [ci-url]: https://github.com/haraka/haraka-plugin-bounce/actions/workflows/ci.yml
-[clim-img]: https://codeclimate.com/github/haraka/haraka-plugin-bounce/badges/gpa.svg
-[clim-url]: https://codeclimate.com/github/haraka/haraka-plugin-bounce
-[npm-img]: https://nodei.co/npm/haraka-plugin-bounce.png
-[npm-url]: https://www.npmjs.com/package/haraka-plugin-bounce
+[cov-img]: https://codecov.io/github/haraka/haraka-plugin-bounce/coverage.svg
+[cov-url]: https://codecov.io/github/haraka/haraka-plugin-bounce
+[qlty-img]: https://qlty.sh/gh/haraka/projects/haraka-plugin-bounce/maintainability.svg
+[qlty-url]: https://qlty.sh/gh/haraka/projects/haraka-plugin-bounce

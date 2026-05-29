@@ -5,26 +5,22 @@ const { describe, it, beforeEach, afterEach } = require('node:test')
 const sinon = require('sinon')
 
 const { Address } = require('@haraka/email-address')
-const fixtures = require('haraka-test-fixtures')
+const { callHook, makeConnection, makePlugin } = require('haraka-test-fixtures')
 
 let plugin, connection, should_skip_spy
 
 beforeEach(() => {
-  plugin = new fixtures.plugin('bounce')
-  connection = fixtures.connection.createConnection()
-  connection.remote.ip = '8.8.8.8'
-  connection.relaying = false
-  connection.init_transaction()
-  connection.transaction.mail_from = new Address('<>')
-  connection.transaction.rcpt_to.push(new Address('test@example.com'))
-  plugin.register()
+  plugin = makePlugin('bounce')
+  connection = makeConnection({ ip: '8.8.8.8', mailFrom: '<>', rcptTo: ['test@example.com'] })
   should_skip_spy = sinon.spy(plugin, 'should_skip')
 })
 
 afterEach(() => sinon.restore())
 
-const call = (fn, ...args) =>
-  new Promise((resolve) => plugin[fn]((code, msg) => resolve([code, msg]), connection, ...args))
+const call = async (fn, ...args) => {
+  const { rc, msg } = await callHook(plugin, fn, connection, ...args)
+  return [rc, msg]
+}
 
 const assertNext = ([code, msg]) => {
   assert.equal(code, undefined)
