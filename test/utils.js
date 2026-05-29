@@ -5,19 +5,13 @@ const { describe, it, beforeEach, afterEach } = require('node:test')
 const sinon = require('sinon')
 
 const { Address } = require('@haraka/email-address')
-const fixtures = require('haraka-test-fixtures')
+const { makeConnection, makePlugin } = require('haraka-test-fixtures')
 
 let plugin, connection, should_skip_spy
 
 beforeEach(() => {
-  plugin = new fixtures.plugin('bounce')
-  connection = fixtures.connection.createConnection()
-  connection.remote.ip = '8.8.8.8'
-  connection.relaying = false
-  connection.init_transaction()
-  connection.transaction.mail_from = new Address('<>')
-  connection.transaction.rcpt_to.push(new Address('test@example.com'))
-  plugin.register()
+  plugin = makePlugin('bounce')
+  connection = makeConnection({ ip: '8.8.8.8', mailFrom: '<>', rcptTo: ['test@example.com'] })
   should_skip_spy = sinon.spy(plugin, 'should_skip')
   void should_skip_spy
 })
