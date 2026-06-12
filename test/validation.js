@@ -524,6 +524,18 @@ describe('lib/validation compareHash', () => {
     assert.equal(result.match, false)
     assert.equal(result.msg, 'hash length mismatch')
   })
+
+  it('does not match a longer actual that shares the full prefix', () => {
+    const result = validationLib.compareHash('abcdef', 'abcdefXYZ')
+    assert.equal(result.match, false)
+    assert.equal(result.msg, 'hash length mismatch')
+  })
+
+  it('handles a multibyte actual of equal string length without throwing', () => {
+    const result = validationLib.compareHash('abcdef', 'abcdeé')
+    assert.equal(result.match, false)
+    assert.equal(result.msg, 'hash length mismatch')
+  })
 })
 
 describe('lib/validation isDateValid', () => {

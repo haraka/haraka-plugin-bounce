@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   - hash validation was effectively broken since b61f55a, see #29
 - fix: reject_all had two bare results.has(...) calls with no assert
 - fix: bad_rcpt "will not check for bad recipient" was calling reject_all vs bad_rcpt
+- fix: compareHash truncated a longer hash to expected length (#30)
 - test: fix stubs that masked dead assertions, see #29
   - restore skipped tests
   - drop sinon; assert real outcomes / inject seams instead
