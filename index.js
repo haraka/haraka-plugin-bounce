@@ -1,8 +1,6 @@
-// bounce tests
-const { SPF } = require('haraka-plugin-spf')
-const net_utils = require('haraka-net-utils')
 const crypto = require('node:crypto')
-const addrparser = require('@haraka/email-address')
+const spfLib = require('./lib/spf')
+const validationLib = require('./lib/validation')
 
 const MAX_HASH_AGE_DAYS = 6
 
@@ -106,40 +104,31 @@ exports.load_bounce_whitelist = function () {
 }
 
 /*
- * Checks message for null sender (bounces have a null sender)
- *
  * Special cases:
  * - Microsoft Exchange will send mail to distribution groups using a
  *   null sender if the "report_to_originator_enabled" property is false.
  * - Some email providers (e.g., gmx.net) send DMARC reports with a null sender
  * - Some auto-responders send replies with a null sender
- *
- * Note: This only applies to inbound messages with a null sender.
  */
 exports.check_null_sender = function (next, connection) {
   if (!connection?.transaction?.mail_from) return next()
 
-  const is_null_sender = connection.transaction.mail_from.isNull() ? 'yes' : 'no'
+  const isa = connection.transaction.mail_from.isNull()
   connection.transaction.results.add(this, {
-    isa: is_null_sender,
+    isa,
+    human: `isa: ${isa ? 'yes' : 'no'}`,
     emit: true,
   })
 
   next()
 }
 
-/*
- * Implements complete rejection of all bounce messages.
- *
- * This function performs the most restrictive validation by rejecting
- * all messages with a null sender (bounce messages). This is typically
- * used for mail servers that never need to receive bounce messages or
- * for domains that experience high levels of backscatter.
- *
- * Configuration option: reject.all_bounces (boolean)
- *
- * Note: This only applies to inbound messages with a null sender.
- */
+// Tri-state: true if a bounce (null sender), false if not, undefined before
+// check_null_sender has run.
+exports.is_a_bounce = function (connection) {
+  return connection.transaction?.results?.get(this)?.isa
+}
+
 exports.reject_all = function (next, connection) {
   if (!connection?.transaction) return next()
   if (!this.cfg.reject.all_bounces) return next()
@@ -156,19 +145,6 @@ exports.reject_all = function (next, connection) {
   next(DENY, 'Bounces not accepted here')
 }
 
-/*
- * Validates that bounce messages have exactly one recipient.
- *
- * Legitimate bounce messages should be addressed to only one recipient
- * (the original sender). Multiple recipients in a bounce message typically
- * indicate a forged message or backscatter attempt.
- *
- * Configuration options:
- * - check.single_recipient (boolean): Enable this check
- * - reject.single_recipient (boolean): Reject messages that fail this check
- *
- * Note: This only applies to inbound messages with a null sender.
- */
 exports.single_recipient = function (next, connection) {
   if (!connection?.transaction) return next()
   if (!this.cfg.check.single_recipient) return next()
@@ -176,7 +152,6 @@ exports.single_recipient = function (next, connection) {
 
   const { transaction } = connection
 
-  // Valid bounces have a single recipient
   if (transaction.rcpt_to.length === 1) {
     transaction.results.add(this, { pass: 'single_recipient', emit: true })
     return next()
@@ -198,20 +173,11 @@ exports.single_recipient = function (next, connection) {
 }
 
 /*
- * Validates that bounce messages have an empty Return-Path header.
- *
- * According to RFC 3834, bounce messages should have an empty Return-Path
- * header. This function checks for the presence of this header and validates
- * that it's either missing or set to '<>'.
- *
- * Configuration options:
- * - check.empty_return_path (boolean): Enable this check
- * - reject.empty_return_path (boolean): Reject messages that fail this check
+ * Per RFC 3834, bounce messages should have an empty Return-Path header.
+ * Check for presence and verify that it's missing or '<>'.
  *
  * Special cases:
  * - Microsoft Exchange distribution lists with null sender may include a Return-Path
- *
- * Note: This only applies to inbound messages with a null sender.
  */
 exports.empty_return_path = function (next, connection) {
   if (!connection?.transaction) return next()
@@ -241,16 +207,7 @@ exports.empty_return_path = function (next, connection) {
 
 /*
  * Rejects bounces sent to recipients that should never receive bounces.
- *
- * This function checks if the recipient's email address is listed in the
- * 'bounce_bad_rcpt' configuration file. This is useful for auto-responders,
- * no-reply addresses, and system addresses that should never receive bounce
- * messages.
- *
- * Configuration:
- * - reject.bad_rcpt (boolean): When true, bounces to these addresses are rejected
- *
- * Note: This only applies to inbound messages with a null sender.
+ * Rejects when recipient's email address is listed in 'bounce_bad_rcpt'
  */
 exports.bad_rcpt = function (next, connection, rcpt) {
   if (!connection?.transaction) return next()
@@ -273,47 +230,31 @@ exports.bad_rcpt = function (next, connection, rcpt) {
   next()
 }
 
-/*
- * Enables message body parsing for SPF checks on bounce messages.
- *
- * This function prepares the transaction for bounce_spf by setting the
- * parse_body flag. This ensures that the message body will be available
- * for extracting headers in the bounce message.
- *
- * Configuration option: check.bounce_spf (boolean)
- *
- * Note: This only applies to inbound messages with a null sender.
- */
 exports.bounce_spf_enable = function (next, connection) {
   if (!connection?.transaction) return next()
   if (this.should_skip(connection)) return next()
 
-  if (this.cfg.check.bounce_spf) {
-    connection.transaction.parse_body = true
-  }
+  if (this.cfg.check.bounce_spf) connection.transaction.parse_body = true
   next()
 }
 
 /*
- * Performs SPF validation on IP addresses found in bounce message headers.
+ * SPF validates IP addresses found in bounce message headers.
  *
  * This function:
- * 1. Extracts IP addresses from Received headers in the bounce message body
+ * 1. Extracts IP addresses from Received headers in the message body
  * 2. Performs SPF validation for each IP using the recipient's domain
- * 3. Passes the message if any IP passes SPF validation
- * 4. Fails if all IPs fail SPF validation (potential spoofed bounce)
- *
- * Configuration options:
- * - check.bounce_spf (boolean): Enable this check
- * - reject.bounce_spf (boolean): Reject messages that fail this check
+ * 3. Passes when any IP passes SPF
+ * 4. Fails if all IPs fail SPF
  *
  * SPF Results:
  * - PASS: Message is accepted (likely a legitimate bounce)
  * - NONE/TEMPERROR/PERMERROR: Check is skipped
- * - NEUTRAL/SOFTFAIL/FAIL: Message fails validation (potential spoofed bounce)
- *
- * Note: This only applies to inbound messages with a null sender.
+ * - NEUTRAL/SOFTFAIL/FAIL: Message fails validation
  */
+// Injectable SPF lookup; overridden in tests to avoid live DNS.
+exports.spf_lookup = spfLib.defaultLookup
+
 exports.bounce_spf = async function (next, connection) {
   if (!connection?.transaction?.body) return next()
   if (!this.cfg.check.bounce_spf) return next()
@@ -322,9 +263,8 @@ exports.bounce_spf = async function (next, connection) {
 
   const { transaction } = connection
 
-  // Recurse through all textual parts and store all parsed IPs
-  // in a Set to remove any duplicates which might appear.
-  const ips = this.find_received_headers(transaction.body)
+  // Recurse through all textual parts and store all parsed IPs in a Set
+  const ips = spfLib.findReceivedHeaders(transaction.body)
   if (ips.size === 0) {
     connection.loginfo(this, 'No received headers found in message')
     transaction.results.add(this, {
@@ -336,75 +276,33 @@ exports.bounce_spf = async function (next, connection) {
 
   connection.logdebug(this, `found IPs to check: ${[...ips]}`)
 
-  const spf = new SPF()
+  const verdict = await spfLib.evaluate(ips, transaction.rcpt_to[0], this.spf_lookup)
 
-  for (const ip of ips) {
-    let result
-    try {
-      result = await spf.check_host(ip, transaction.rcpt_to[0].host, transaction.rcpt_to[0].address)
-    } catch (err) {
-      connection.logerror(this, err.message)
-      transaction.results.add(this, {
-        skip: 'bounce_spf',
-        msg: err.message,
-      })
-      return next()
-    }
-
-    const spf_result = spf.result(result)
-    connection.logdebug(this, { ip, result, spf_result })
-
-    switch (result) {
-      case spf.SPF_NONE:
-      // falls through, domain doesn't publish an SPF record
-      case spf.SPF_TEMPERROR:
-      // falls through
-      case spf.SPF_PERMERROR:
-        // Abort as all subsequent lookups will return this
-        connection.logdebug(this, `Aborted: SPF returned ${spf.result(result)}`)
-        transaction.results.add(this, {
-          skip: 'bounce_spf',
-          msg: `SPF returned ${spf.result(result)}`,
-        })
-        return next()
-      case spf.SPF_PASS:
-        // Presume this is a valid bounce
-        // TODO: this could be spoofed; could weight each IP to combat
-        connection.loginfo(this, `Valid bounce originated from ${ip}`)
-        transaction.results.add(this, { pass: 'bounce_spf' })
-        return next()
-      default:
-        continue
-    }
+  if (verdict.type === 'pass') {
+    connection.loginfo(this, `valid bounce originated from ${verdict.ip}`)
+    transaction.results.add(this, { pass: 'bounce_spf' })
+    return next()
   }
 
-  // We've checked all the IPs and none of them returned Pass
+  if (verdict.type === 'skip') {
+    transaction.results.add(this, { skip: 'bounce_spf', msg: verdict.msg })
+    return next()
+  }
+
   transaction.results.add(this, {
     fail: 'bounce_spf',
-    msg: 'invalid bounce (spoofed sender)',
+    msg: verdict.msg,
     emit: true,
   })
-
   if (this.cfg.reject.bounce_spf) {
     return next(DENY, 'Invalid bounce (spoofed sender)')
   }
-
   next()
 }
 
 /*
- * Creates and adds a validation hash to outbound emails.
+ * Adds a validation hash to outbound emails.
  * This hash will be verified when bounce messages are received.
- *
- * The hash is a HMAC based on:
- * 1. From header (sender identity)
- * 2. Date header (timestamp for expiration verification)
- * 3. Message-ID header (unique message identifier)
- *
- * The cryptographic process:
- * 1. Combines these headers in the format: `${from}:${date}:${message_id}`
- * 2. Generates an HMAC using the configured algorithm and secret key
- * 3. Adds the resulting hash as an X-Haraka-Bounce-Validation header
  *
  * Security considerations:
  * - The secret key must remain confidential
@@ -412,7 +310,7 @@ exports.bounce_spf = async function (next, connection) {
  * - The hash is time-bound to prevent replay attacks
  * - Uses timing-safe comparison to prevent timing attacks
  *
- * Note: This only applies to outbound messages.
+ * Note: only applies to outbound messages.
  */
 exports.create_validation_hash = function (next, connection) {
   if (!connection?.transaction) return next()
@@ -420,7 +318,7 @@ exports.create_validation_hash = function (next, connection) {
 
   const { transaction } = connection
 
-  if (!connection.relaying || transaction.results.has(this, 'isa', 'yes')) {
+  if (!connection.relaying || this.is_a_bounce(connection)) {
     return next()
   }
 
@@ -429,16 +327,13 @@ exports.create_validation_hash = function (next, connection) {
   const message_id_header = transaction.header.get_decoded('Message-ID')
 
   // are any of these headers missing?
-  if (!from_header || !date_header || !message_id_header) {
-    return next()
-  }
+  if (!from_header || !date_header || !message_id_header) return next()
 
-  const amalgam = `${from_header}:${date_header}:${message_id_header}`
-
-  const hash = crypto
-    .createHmac(this.cfg.validation.hash_algorithm, this.cfg.validation.secret)
-    .update(amalgam)
-    .digest('hex')
+  const hash = validationLib.computeHash(this.cfg.validation.hash_algorithm, this.cfg.validation.secret, {
+    from: from_header,
+    date: date_header,
+    message_id: message_id_header,
+  })
 
   transaction.add_header('X-Haraka-Bounce-Validation', hash)
 
@@ -446,15 +341,7 @@ exports.create_validation_hash = function (next, connection) {
 }
 
 /*
- * Validates a bounce message using the cryptographic hash validation system.
- *
- * Verification process:
- * 1. Extracts original message headers from the bounce message body
- * 2. Recreates the amalgamated string (from:date:message_id)
- * 3. Generates a new HMAC hash using the same algorithm and secret
- * 4. Performs a timing-safe comparison between the generated hash and the one in the bounce
- * 5. If hash matches, validates the age of the bounce using the Date header
- * 6. If no hash found but headers present, checks against whitelist
+ * Validates a bounce message using hash validation.
  *
  * Security features:
  * - Uses crypto.timingSafeEqual() to prevent timing attacks
@@ -462,13 +349,6 @@ exports.create_validation_hash = function (next, connection) {
  * - Checks that all required headers are present
  * - Ensures hash length matches to prevent buffer comparison issues
  * - Falls back to whitelist checking when hash is missing but headers are present
- *
- * Configuration options:
- * - check.hash_validation (boolean): Enable hash-based validation
- * - reject.hash_validation (boolean): Reject bounces that fail hash validation
- * - reject.hash_date (boolean): Reject bounces with expired or invalid dates
- * - skip.remaining_plugins (boolean): Skip remaining plugins if validation passes
- * - validation.max_hash_age_days (number): Maximum age in days for bounce messages
  *
  * Result states:
  * - pass(validate_bounce): Hash matches and date is valid, bounce is legitimate
@@ -489,214 +369,39 @@ exports.validate_bounce = function (next, connection) {
   if (this.should_skip(connection)) return next()
 
   const { transaction } = connection
+  const headers = validationLib.findBounceHeaders(transaction.body)
 
-  const { from, date, message_id, hash } = this.find_bounce_headers(transaction, transaction.body)
+  const verdict = validationLib.verify(headers, {
+    algorithm: this.cfg.validation.hash_algorithm,
+    secret: this.cfg.validation.secret,
+    maxAgeDays: this.cfg.validation.max_hash_age_days,
+    whitelist: this.cfg.whitelist,
+    rcpt: transaction.rcpt_to[0]?.address?.toLowerCase(),
+    fromHeader: transaction.header.get_decoded('From')?.toLowerCase(),
+  })
 
-  if (hash) {
-    const amalgam = `${from}:${date}:${message_id}`
+  if (verdict.parseError) {
+    connection.loginfo(this, `@haraka/email-address parsing error: ${verdict.parseError}`)
+  }
 
-    const bounce_hash = crypto
-      .createHmac(this.cfg.validation.hash_algorithm, this.cfg.validation.secret)
-      .update(amalgam)
-      .digest('hex')
-
-    let msg
-    if (from && date && message_id) {
-      const buff_1 = Buffer.from(bounce_hash)
-      // ensure that we are comparing with same size Buffers
-      const buff_2 = Buffer.concat([Buffer.from(hash)], bounce_hash.length)
-
-      if (crypto.timingSafeEqual(buff_1, buff_2)) {
-        const result = this.is_date_valid(date)
-        if (result.valid) {
-          transaction.results.add(this, { pass: 'validate_bounce' })
-          if (this.cfg.skip.remaining_plugins) {
-            return next(OK)
-          }
-          return next()
-        } else {
-          transaction.results.add(this, {
-            fail: 'bounce_date',
-            msg: result.msg,
-            emit: true,
-          })
-          if (this.cfg.reject.hash_date) {
-            return next(DENY, 'invalid bounce')
-          }
-          return next()
-        }
-      }
-
-      msg = bounce_hash.length === hash.length ? 'hash does not match' : 'hash length mismatch'
-    } else {
-      msg = 'missing headers'
-    }
-    if (msg) {
-      transaction.results.add(this, {
-        fail: 'validate_bounce',
-        msg: msg,
-        emit: true,
-      })
-      if (this.cfg.reject.hash_validation) {
-        return next(DENY, 'invalid bounce')
-      }
-      return next()
-    }
-  } else if (from && date && message_id) {
-    const from_header = transaction.header.get_decoded('From').toLowerCase()
-    let parsed_from
-    try {
-      parsed_from = addrparser.parseHeader(from_header)[0].address
-    } catch (err) {
-      // ignore error
-      connection.loginfo(this, `@haraka/email-address parsing error: ${err.message}`)
-
-      transaction.results.add(this, {
-        skip: 'validate_bounce',
-        msg: 'invalid from header',
-        emit: true,
-      })
-      return next()
-    }
-
-    const rcpt = transaction.rcpt_to[0].address.toLowerCase()
-
-    if (this.is_whitelisted(rcpt, parsed_from)) {
-      transaction.results.add(this, {
-        skip: 'validate_bounce',
-        msg: 'whitelisted',
-      })
-      return next()
-    }
-
-    transaction.results.add(this, {
-      fail: 'validate_bounce',
-      msg: 'missing validation hash',
-      emit: true,
-    })
-    if (this.cfg.reject.hash_validation) {
-      return next(DENY, 'invalid bounce')
-    }
+  if (verdict.type === 'pass') {
+    transaction.results.add(this, { pass: 'validate_bounce' })
+    if (this.cfg.skip.remaining_plugins) return next(OK)
     return next()
   }
 
-  transaction.results.add(this, {
-    skip: 'validate_bounce',
-    msg: 'missing all headers',
-  })
+  if (verdict.type === 'skip') {
+    transaction.results.add(this, { skip: 'validate_bounce', msg: verdict.msg, emit: verdict.emit })
+    return next()
+  }
 
+  transaction.results.add(this, { fail: verdict.value, msg: verdict.msg, emit: true })
+  if (this.cfg.reject[verdict.rejectOn]) return next(DENY, 'invalid bounce')
   next()
 }
 
-exports.is_date_valid = function (date) {
-  // Parse the date that the original email was sent
-  const email_date = new Date(date)
-  if (isNaN(email_date.getTime())) {
-    return { valid: false, msg: 'invalid date header' }
-  }
-
-  // calculate the number of days since the original email was sent
-  const age = Math.floor((new Date() - email_date) / (1000 * 60 * 60 * 24))
-  if (age > this.cfg.validation.max_hash_age_days) {
-    return { valid: false, msg: 'hash is too old' }
-  }
-
-  return { valid: true }
-}
-
-// Lazy regexp to get IPs from Received: headers in bounces
-const received_re = net_utils.get_ipany_re('^Received:[\\s\\S]*?[\\[\\(](?:IPv6:)?', '[\\]\\)]')
-
-// Extracts IP addresses from Received headers in the bounce message body
-exports.find_received_headers = function (body, ips = new Set()) {
-  if (!body) return ips
-
-  let match
-  received_re.lastIndex = 0
-  while ((match = received_re.exec(body.bodytext))) {
-    const ip = match[1]
-    if (net_utils.is_private_ip(ip)) continue
-    ips.add(ip)
-  }
-  for (let i = 0, l = body.children.length; i < l; i++) {
-    // Recurse in any MIME children
-    this.find_received_headers(body.children[i], ips)
-  }
-  return ips
-}
-
-exports.find_bounce_headers = function (body) {
-  const headers = {}
-
-  // Check the current body part
-  if (body?.bodytext?.length) {
-    headers.from = extract_header(body.bodytext, 'From')
-    headers.date = extract_header(body.bodytext, 'Date')
-    headers.message_id = extract_header(body.bodytext, 'Message-ID')
-    headers.hash = extract_header(body.bodytext, 'X-Haraka-Bounce-Validation')
-
-    // were any headers found?
-    if (headers.from || headers.date || headers.message_id || headers.hash) {
-      return headers
-    }
-  }
-
-  // Recursively check children
-  if (body?.children?.length) {
-    for (const child of body.children) {
-      const child_hdrs = this.find_bounce_headers(child)
-
-      // were any headers found?
-      if (child_hdrs.from || child_hdrs.date || child_hdrs.message_id || child_hdrs.hash) {
-        return child_hdrs
-      }
-    }
-  }
-
-  return headers
-}
-
-// Determines whether validation checks should be skipped
-// Skips checks for outbound emails or messages that aren't bounces
+// skip checks for outbound emails and non-bounces
 exports.should_skip = function (connection) {
-  const not_a_bounce = connection.transaction.results.has(this, 'isa', 'no')
-
-  return connection.relaying || not_a_bounce
-}
-
-// Extracts a header value from email body text
-function extract_header(bodytext, header_name) {
-  if (!bodytext || typeof bodytext !== 'string') return
-
-  // Use a regular expression with named capture group for the header value
-  const header_re = new RegExp(
-    `^${header_name}:(?<value>[^\r\n]*(?:[\r\n]+[ \t][^\r\n]*)*?)[\r\n]+(?:[a-z\\-]+:|$)`,
-    'imu',
-  )
-
-  const match = header_re.exec(bodytext)
-  if (!match?.groups?.value) return
-
-  let { value } = match.groups
-
-  // Split by newlines, remove leading whitespace on folded lines, and join with spaces
-  value = value
-    .split(/[\r\n]+/u)
-    .map((line, i) => (i === 0 ? line : line.replace(/^[ \t]+/u, '')))
-    .join(' ')
-    .trim()
-
-  return value
-}
-
-exports.is_whitelisted = function (rcpt, from) {
-  // Check if recipient has whitelist entries
-  const whitelist_entries = this.cfg.whitelist[rcpt]
-  if (!whitelist_entries) return false
-
-  // Check for exact match
-  if (whitelist_entries.includes(from)) return true
-
-  // Check for domain wildcard match
-  return whitelist_entries.some((addr) => addr.startsWith('*@') && from.endsWith(addr.substring(1)))
+  if (connection.relaying) return true
+  return this.is_a_bounce(connection) === false
 }

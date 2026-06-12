@@ -54,7 +54,7 @@ Adds a X-Haraka-Bounce-Validation header to outbound emails to help verify the a
 
 Create the secret key by running `openssl rand -base64 32` and adding the result to the secret setting in the config file.
 
-This header is used to verify the authenticity of incoming bounce messages by recreating and comparing the hash. If this is enabled on one server, it should be enabled on all servers.
+This header is used to verify the authenticity of incoming bounce messages by recreating and comparing the hash. If this is enabled on one server in a cluster, it should be enabled on all servers.
 
 ### hash_algorithm
 

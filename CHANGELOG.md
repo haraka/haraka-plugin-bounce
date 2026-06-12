@@ -4,7 +4,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
-- test: refactored against test-fixtures 1.7.0
+### [2.2.1] - 2026-06-11
+
+- fix: results.has can't match booleans and denied non-bounces
+  - change: store isa as boolean and read it directly
+  - remove some not-nots so it's easier to reason about
+- fix: validate_bounce passed txn (not body) to find_bounce_headers
+  - hash validation was effectively broken since b61f55a, see #29
+- fix: reject_all had two bare results.has(...) calls with no assert
+- fix: bad_rcpt "will not check for bad recipient" was calling reject_all vs bad_rcpt
+- test: fix stubs that masked dead assertions, see #29
+  - restore skipped tests
+  - drop sinon; assert real outcomes / inject seams instead
+  - coverage 107 to 141 passing tests
+- refactor: extract SPF logic into lib/spf.js; bounce_spf is now an orchestrator
+  - SPF result logic is pure and unit-tested; DNS lookup is an injectable seam
+- refactor: extract verification fns into lib/validation, pure and unit-tested
+- refactor: should_skip; split validate_bounce to cut complexity
+- refactored against test-fixtures 1.7.0 (#27, #28)
+- style: deleted comments that restated the code or user oriented (belong in README)
+- deps: bump versions
 
 ### [2.2.0] - 2026-05-15
 
@@ -150,3 +169,4 @@ Changes to README.md
 [2.1.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.0
 [2.1.2]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.1.2
 [2.2.0]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.2.0
+[2.2.1]: https://github.com/haraka/haraka-plugin-bounce/releases/tag/v2.2.1

@@ -1,21 +1,17 @@
 'use strict'
 
 const assert = require('node:assert/strict')
-const { describe, it, beforeEach, afterEach } = require('node:test')
-const sinon = require('sinon')
+const { describe, it, beforeEach } = require('node:test')
 
 const { Address } = require('@haraka/email-address')
 const { callHook, makeConnection, makePlugin } = require('haraka-test-fixtures')
 
-let plugin, connection, should_skip_spy
+let plugin, connection
 
 beforeEach(() => {
   plugin = makePlugin('bounce')
   connection = makeConnection({ ip: '8.8.8.8', mailFrom: '<>', rcptTo: ['test@example.com'] })
-  should_skip_spy = sinon.spy(plugin, 'should_skip')
 })
-
-afterEach(() => sinon.restore())
 
 const call = async (fn, ...args) => {
   const { rc, msg } = await callHook(plugin, fn, connection, ...args)
@@ -35,7 +31,7 @@ describe('reject_all', () => {
   it('will allow bounces', async () => {
     plugin.cfg.reject.all_bounces = false
     const [code, msg] = await call('reject_all')
-    assert.ok(should_skip_spy.notCalled)
+    assert.ok(!connection.transaction.results.has(plugin, 'fail', 'bounces_accepted'))
     assertNext([code, msg])
   })
 
@@ -49,23 +45,22 @@ describe('reject_all', () => {
     connection.relaying = true
 
     const [code, msg] = await call('reject_all')
-    assert.ok(should_skip_spy.returned(true))
+    assert.ok(!connection.transaction.results.has(plugin, 'fail', 'bounces_accepted'))
     assertNext([code, msg])
   })
 
   it('will ignore non-bounce mail', async () => {
     connection.transaction.mail_from = new Address('<test@example.com>')
-    connection.transaction.results.add(plugin, { isa: 'no' })
+    connection.transaction.results.add(plugin, { isa: false })
     const [code, msg] = await call('reject_all')
-    assert.ok(should_skip_spy.returned(true))
+    assert.ok(!connection.transaction.results.has(plugin, 'fail', 'bounces_accepted'))
     assertNext([code, msg])
   })
 
   it('will reject all bounces', async () => {
     const [code, msg] = await call('reject_all')
-    assert.ok(should_skip_spy.returned(false))
-    connection.transaction.results.has(plugin, 'fail', 'bounces_accepted')
-    connection.transaction.results.has(plugin, 'msg', 'bounces not accepted here')
+    assert.ok(connection.transaction.results.has(plugin, 'fail', 'bounces_accepted'))
+    assert.ok(connection.transaction.results.has(plugin, 'msg', 'Bounces not accepted here'))
     assert.equal(code, DENY)
     assert.equal(msg, 'Bounces not accepted here')
   })
@@ -81,7 +76,6 @@ describe('empty_return_path', () => {
     delete connection.transaction
 
     const [code, msg] = await call('empty_return_path')
-    assert.ok(should_skip_spy.notCalled)
     assertNext([code, msg])
   })
 
@@ -89,13 +83,13 @@ describe('empty_return_path', () => {
     plugin.cfg.check.empty_return_path = false
 
     const [code, msg] = await call('empty_return_path')
-    assert.ok(should_skip_spy.notCalled)
+    assert.ok(!connection.transaction.results.has(plugin, 'pass', 'empty_return_path'))
+    assert.ok(!connection.transaction.results.has(plugin, 'fail', 'empty_return_path'))
     assertNext([code, msg])
   })
 
   it('missing Return-Path header', async () => {
     const [code, msg] = await call('empty_return_path')
-    assert.ok(should_skip_spy.returned(false))
     assert.ok(connection.transaction.results.has(plugin, 'pass', 'empty_return_path'))
     assertNext([code, msg])
   })
@@ -103,7 +97,6 @@ describe('empty_return_path', () => {
   it('has empty Return-Path header', async () => {
     connection.transaction.add_header('Return-Path', '')
     const [code, msg] = await call('empty_return_path')
-    assert.ok(should_skip_spy.returned(false))
     assert.ok(connection.transaction.results.has(plugin, 'pass', 'empty_return_path'))
     assertNext([code, msg])
   })
@@ -114,7 +107,6 @@ describe('empty_return_path', () => {
     plugin.cfg.reject.empty_return_path = false
 
     const [code, msg] = await call('empty_return_path')
-    assert.ok(should_skip_spy.returned(false))
     assert.ok(connection.transaction.results.has(plugin, 'fail', 'empty_return_path'))
     assert.ok(connection.transaction.results.has(plugin, 'msg', 'bounce with non-empty Return-Path'))
     assertNext([code, msg])
@@ -124,7 +116,6 @@ describe('empty_return_path', () => {
     connection.transaction.add_header('Return-Path', 'Hello World!')
 
     const [code, msg] = await call('empty_return_path')
-    assert.ok(should_skip_spy.returned(false))
     assert.ok(connection.transaction.results.has(plugin, 'fail', 'empty_return_path'))
     assert.ok(connection.transaction.results.has(plugin, 'msg', 'bounce with non-empty Return-Path'))
     assert.equal(code, DENY)
@@ -142,14 +133,14 @@ describe('single_recipient', () => {
   it('will not check for single recipient', async () => {
     plugin.cfg.check.single_recipient = false
     const [code, msg] = await call('single_recipient')
-    assert.ok(should_skip_spy.notCalled)
+    assert.ok(!connection.transaction.results.has(plugin, 'pass', 'single_recipient'))
+    assert.ok(!connection.transaction.results.has(plugin, 'fail', 'single_recipient'))
     assertNext([code, msg])
   })
 
   it('has single recipient', async () => {
     const [code, msg] = await call('single_recipient')
     assert.ok(connection.transaction.results.has(plugin, 'pass', 'single_recipient'))
-    assert.ok(should_skip_spy.calledOnce)
     assertNext([code, msg])
   })
 
@@ -158,7 +149,6 @@ describe('single_recipient', () => {
     connection.transaction.rcpt_to.push(new Address('test2@example.com'))
     const [code, msg] = await call('single_recipient')
     assert.ok(connection.transaction.results.has(plugin, 'fail', 'single_recipient'))
-    assert.ok(should_skip_spy.calledOnce)
     assertNext([code, msg])
   })
 
@@ -167,9 +157,18 @@ describe('single_recipient', () => {
     const [code, msg] = await call('single_recipient')
     assert.ok(connection.transaction.results.has(plugin, 'fail', 'single_recipient'))
     assert.ok(connection.transaction.results.has(plugin, 'msg', 'too many recipients'))
-    assert.ok(should_skip_spy.calledOnce)
     assert.equal(code, DENY)
     assert.equal(msg, 'this bounce message has too many recipients')
+  })
+
+  it('will not reject multiple recipients when not a bounce', async () => {
+    connection.transaction.mail_from = new Address('<sender@example.com>')
+    connection.transaction.rcpt_to.push(new Address('test2@example.com'))
+    await call('check_null_sender')
+
+    const [code, msg] = await call('single_recipient')
+    assert.ok(!connection.transaction.results.has(plugin, 'fail', 'single_recipient'))
+    assertNext([code, msg])
   })
 })
 
@@ -180,9 +179,10 @@ describe('bad_rcpt', () => {
 
   it('will not check for bad recipient', async () => {
     plugin.cfg.reject.bad_rcpt = false
+    const rcpt = new Address('bad1@example.com')
 
-    const [code, msg] = await call('reject_all', [new Address('<>')])
-    assert.ok(should_skip_spy.notCalled)
+    const [code, msg] = await call('bad_rcpt', rcpt)
+    assert.ok(!connection.transaction.results.has(plugin, 'fail', 'bad_rcpt'))
     assertNext([code, msg])
   })
 
@@ -190,7 +190,6 @@ describe('bad_rcpt', () => {
     delete connection.transaction
 
     const [code, msg] = await call('empty_return_path')
-    assert.ok(should_skip_spy.notCalled)
     assertNext([code, msg])
   })
 
@@ -199,7 +198,6 @@ describe('bad_rcpt', () => {
     const rcpt = new Address('test@example.com')
     const [code, msg] = await call('bad_rcpt', rcpt)
     assert.ok(connection.transaction.results.has(plugin, 'pass', 'bad_rcpt'))
-    assert.ok(should_skip_spy.calledOnce)
     assertNext([code, msg])
   })
 
@@ -208,7 +206,6 @@ describe('bad_rcpt', () => {
     const [code, msg] = await call('bad_rcpt', rcpt)
     assert.ok(connection.transaction.results.has(plugin, 'fail', 'bad_rcpt'))
     assert.ok(connection.transaction.results.has(plugin, 'msg', 'rcpt does not accept bounces'))
-    assert.ok(should_skip_spy.calledOnce)
     assert.equal(code, DENY)
     assert.equal(msg, `${rcpt.address} does not accept bounces`)
   })

@@ -2,38 +2,30 @@
 
 const assert = require('node:assert/strict')
 const crypto = require('node:crypto')
-const { describe, it, beforeEach, afterEach } = require('node:test')
-const sinon = require('sinon')
+const { describe, it, beforeEach } = require('node:test')
 
-const { makeConnection, makePlugin } = require('haraka-test-fixtures')
+const { makePlugin } = require('haraka-test-fixtures')
 
-let plugin, connection, should_skip_spy
+let plugin
 
 beforeEach(() => {
   plugin = makePlugin('bounce')
-  connection = makeConnection({ ip: '8.8.8.8', mailFrom: '<>', rcptTo: ['test@example.com'] })
-  should_skip_spy = sinon.spy(plugin, 'should_skip')
-  void should_skip_spy
 })
 
-afterEach(() => sinon.restore())
-
 describe('register', () => {
-  it('should have register function', () => {
-    const load_bounce_ini_stub = sinon.stub(plugin, 'load_bounce_ini')
-    const load_bounce_bad_rcpt_stub = sinon.stub(plugin, 'load_bounce_bad_rcpt')
-    const load_bounce_whitelist_stub = sinon.stub(plugin, 'load_bounce_whitelist')
-
-    assert.equal('function', typeof plugin.register)
+  it('loads all configs', () => {
+    delete plugin.cfg
 
     plugin.register()
 
-    assert.ok(load_bounce_ini_stub.calledOnce)
-    assert.ok(load_bounce_bad_rcpt_stub.calledOnce)
-    assert.ok(load_bounce_whitelist_stub.calledOnce)
+    assert.ok(plugin.cfg.check) // load_bounce_ini
+    assert.ok(plugin.cfg.reject)
+    assert.ok(plugin.cfg.validation)
+    assert.ok(plugin.cfg.invalid_addrs) // load_bounce_bad_rcpt
+    assert.ok(plugin.cfg.whitelist) // load_bounce_whitelist
   })
 
-  it.skip('registers hooks', () => {
+  it('registers hooks', () => {
     assert.deepEqual(plugin.hooks, {
       mail: ['check_null_sender', 'reject_all'],
       rcpt_ok: ['bad_rcpt'],
@@ -45,38 +37,29 @@ describe('register', () => {
 
 describe('load_configs', () => {
   it('load_bounce_ini', () => {
-    const validate_config_stub = sinon.stub(plugin, 'validate_config')
-
     plugin.load_bounce_ini()
 
-    assert.ok(validate_config_stub.calledOnce)
     assert.ok(plugin.cfg.check)
     assert.ok(plugin.cfg.reject)
-    assert.ok(plugin.cfg.validation)
+    // validate_config ran and applied its defaults
+    assert.equal(plugin.cfg.validation.hash_algorithm, 'sha256')
+    assert.equal(plugin.cfg.validation.max_hash_age_days, 6)
   })
 
   it('load_bounce_bad_rcpt', () => {
-    const load_bounce_bad_rcpt_stub = sinon.stub(plugin, 'load_bounce_bad_rcpt')
-
     plugin.load_bounce_bad_rcpt()
 
-    assert.ok(load_bounce_bad_rcpt_stub.calledOnce)
-    assert.ok(plugin.cfg.invalid_addrs)
+    assert.ok(Array.isArray(plugin.cfg.invalid_addrs))
   })
 
   it('load_bounce_whitelist', () => {
-    const load_bounce_whitelist_stub = sinon.stub(plugin, 'load_bounce_whitelist')
-
     plugin.load_bounce_whitelist()
 
-    assert.ok(load_bounce_whitelist_stub.calledOnce)
     assert.ok(plugin.cfg.whitelist)
   })
 })
 
 describe('validate_config', () => {
-  let getHashes_stub, logerror_stub
-
   beforeEach(() => {
     plugin.cfg = {
       validation: {
@@ -99,9 +82,6 @@ describe('validate_config', () => {
         hash_date: false,
       },
     }
-    logerror_stub = sinon.stub(plugin, 'logerror')
-    getHashes_stub = sinon.stub(crypto, 'getHashes')
-    getHashes_stub.returns(['sha256', 'sha512', 'md5'])
   })
 
   it('will enable single recipient check', () => {
@@ -109,7 +89,6 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.notCalled)
     assert.ok(plugin.cfg.check.single_recipient)
   })
 
@@ -118,7 +97,6 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.notCalled)
     assert.ok(plugin.cfg.check.empty_return_path)
   })
 
@@ -128,7 +106,6 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.notCalled)
     assert.ok(plugin.cfg.check.bounce_spf)
   })
 
@@ -139,14 +116,12 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.calledOnce)
     assert.ok(plugin.cfg.check.hash_date)
   })
 
   it('will not check hash validation', () => {
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.notCalled)
     assert.equal(plugin.cfg.check.hash_validation, false)
   })
 
@@ -156,7 +131,6 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.calledOnce)
     assert.equal(plugin.cfg.check.hash_validation, false)
   })
 
@@ -166,7 +140,6 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.calledOnce)
     assert.equal(plugin.cfg.check.hash_validation, false)
   })
 
@@ -176,8 +149,6 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.calledOnce)
-    assert.ok(logerror_stub.calledOnce)
     assert.equal(plugin.cfg.check.hash_validation, false)
   })
 
@@ -187,8 +158,6 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.calledOnce)
-    assert.ok(logerror_stub.calledOnce)
     assert.equal(plugin.cfg.check.hash_validation, false)
   })
 
@@ -198,7 +167,6 @@ describe('validate_config', () => {
 
     plugin.validate_config()
 
-    assert.ok(getHashes_stub.calledOnce)
-    assert.ok(logerror_stub.notCalled)
+    assert.equal(plugin.cfg.check.hash_validation, true)
   })
 })
